@@ -1,0 +1,21 @@
+# Build output
+build/
+bin/
+*.o
+*.obj
+*.exe
+*.out
+
+# Video / footage
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+footage/
+data/raw/
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
