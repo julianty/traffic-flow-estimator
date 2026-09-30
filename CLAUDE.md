@@ -27,8 +27,12 @@
 
 ## Tech stack
 - C++17, g++, VS Code (current setup — works fine, no need to change)
-- OpenCV — not yet installed/verified
-- Build: ad hoc `g++` compile for now. Once OpenCV flags get unwieldy, a simple Makefile is worth adding — not urgent.
+- OpenCV 5.0.0 — installed via MSYS2 UCRT64 (`pacman -S mingw-w64-ucrt-x86_64-opencv`), verified Sep 30 with `scratch/hello_opencv.cpp`
+  - pkg-config name is `opencv5`; headers in `C:/msys64/ucrt64/include/opencv5`
+  - HighGUI (`imshow`) needs Qt6 at runtime: `mingw-w64-ucrt-x86_64-qt6-5compat` (pacman lists it as optional, but it isn't for us)
+  - `C:\msys64\ucrt64\bin` is on Windows PATH so exes run outside the UCRT64 terminal
+- ffmpeg — installed (came in as an OpenCV dependency)
+- Build: VS Code default build task (`.vscode/tasks.json`, gitignored) with `-std=c++17 -IC:/msys64/ucrt64/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_highgui`; or `g++ ... $(pkg-config --cflags --libs opencv5)` in the UCRT64 terminal. Add `-lopencv_videoio -lopencv_video` for video/MOG2. Since `.vscode/` isn't versioned, a simple Makefile is worth adding — not urgent.
 
 ## Data
 - Source: YouTube traffic-camera footage, single fixed angle. No footage downloaded yet.
@@ -43,7 +47,7 @@
 
 | Week | Dates | Focus |
 |---|---|---|
-| 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it; pull 1–2 short YouTube clips; git repo + this file |
+| 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull 1–2 short YouTube clips; git repo + this file ✅ |
 | 2 | Sep 29–Oct 5 | Background subtraction running end-to-end on a sample clip; visualize foreground masks |
 | 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob |
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology) |
@@ -56,5 +60,6 @@
 | — | Dec 1–2 | Final polish, submit |
 
 ## Open questions
-- OpenCV version/install method not yet decided
+- ~~OpenCV version/install method not yet decided~~ → resolved Sep 30: OpenCV 5.0.0 via MSYS2 UCRT64 pacman
+- Confirm `BackgroundSubtractorMOG2` location/API in OpenCV 5 (most tutorials are 4.x)
 - Exact line-crossing / counting-zone geometry not yet designed
