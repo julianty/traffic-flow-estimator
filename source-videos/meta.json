@@ -1,0 +1,210 @@
+{
+  "_about": "Metadata for clips in source-videos/. Keys under 'clips' are short aliases for referring to a clip in code, notes, and the write-up. Raw .mp4 files are gitignored; this file is tracked.",
+  "_fields": {
+    "role": "main | validation | backup | unused | excluded. validation = held-out clip similar to main; tune parameters on main, then check they still work here without re-tuning",
+    "view": "birdseye | traffic cam | dashcam",
+    "scene": "free text, e.g. highway, 4-way intersection",
+    "source_url": "Pexels page the file was downloaded from (Pexels page IDs can differ from the file-name ID)",
+    "width/height/fps/duration_s/codec/audio": "measured with ffprobe on the actual file (not taken from the file name)",
+    "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit); max_shift_px in full-res pixels. stable = a few px or less",
+    "annotations.count_line": "line-crossing geometry, e.g. [[x1,y1],[x2,y2]] in full-res pixels; null until designed",
+    "annotations.mask_regions": "polygons to ignore (overlays, trees); empty until needed",
+    "annotations.ground_truth": "manual vehicle count for benchmarking; null until counted",
+    "author": "Pexels creator (attribution optional under the license); null if not recorded"
+  },
+  "source": "Pexels",
+  "license": {
+    "name": "Pexels License",
+    "url": "https://www.pexels.com/license/",
+    "summary": "Free to use and modify; attribution not required. Don't redistribute or sell unaltered copies (keep raw files out of the public repo).",
+    "checked": "2026-09-30"
+  },
+  "downloaded": "2026-09-30",
+  "roles": {
+    "main": "auckland-hwy",
+    "validation": "auckland-fwy",
+    "backup": "urban-road"
+  },
+  "clips": {
+    "auckland-hwy": {
+      "file": "16516296_1920_1080_25fps.mp4",
+      "role": "main",
+      "source_url": "https://www.pexels.com/video/busy-auckland-highway-traffic-scene-38854021/",
+      "author": "Kiwi and Camera",
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 25.0,
+      "duration_s": 60.0,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 1,
+        "max_rotation_deg": 0.02
+      },
+      "notes": "Tripod, dense traffic, close/telephoto view: expect overlapping vehicles (merged blobs).",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "auckland-fwy": {
+      "file": "16516297_1920_1080_25fps.mp4",
+      "role": "validation",
+      "source_url": "https://www.pexels.com/video/busy-freeway-traffic-in-auckland-38854018/",
+      "author": "Kiwi and Camera",
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 25.0,
+      "duration_s": 90.2,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 2,
+        "max_rotation_deg": 0.04
+      },
+      "notes": "Same creator as auckland-hwy (also Auckland), but framed differently (not the same camera position), so it needs its own count_line.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "urban-road": {
+      "file": "14350696_3840_2160_60fps.mp4",
+      "role": "backup",
+      "source_url": "https://www.pexels.com/video/busy-urban-road-with-moving-cars-33810551/",
+      "author": null,
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 3840,
+      "height": 2160,
+      "fps": 59.94,
+      "duration_s": 37.54,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 2,
+        "max_rotation_deg": 0.1
+      },
+      "notes": "Tripod, sparse traffic, little occlusion: easy case for checking BFS blobs. 4K60, so downscale before processing.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "birdseye-4way": {
+      "file": "6595761-uhd_3840_2160_24fps.mp4",
+      "role": "unused",
+      "source_url": "https://www.pexels.com/video/birds-eye-view-of-city-streets-6595761/",
+      "author": null,
+      "view": "birdseye",
+      "scene": "4-way intersection",
+      "intersection": true,
+      "width": 2560,
+      "height": 1440,
+      "fps": 24.0,
+      "duration_s": 31.1,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "drifting",
+        "max_shift_px": 54,
+        "max_rotation_deg": 1.6
+      },
+      "notes": "Best geometry (top-down, little occlusion) but the drone slowly drifts and rotates, which shows up as false foreground. Filename says 3840x2160; actual file is 2560x1440.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "motorway-vertical": {
+      "file": "11928168-hd_1080_1920_25fps.mp4",
+      "role": "unused",
+      "source_url": "https://www.pexels.com/video/high-angle-view-of-cars-on-a-motorway-11928168/",
+      "author": null,
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1080,
+      "height": 1920,
+      "fps": 25.0,
+      "duration_s": 21.61,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "drifting",
+        "max_shift_px": 20,
+        "max_rotation_deg": 0.41
+      },
+      "notes": "Portrait video, sparse traffic, mild drift. Borderline.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "skyline-hwy": {
+      "file": "15123032_1920_1080_60fps.mp4",
+      "role": "excluded",
+      "source_url": "https://www.pexels.com/video/urban-highway-traffic-in-city-skyline-35684287/",
+      "author": null,
+      "view": "dashcam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.94,
+      "duration_s": 48.21,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "moving",
+        "max_shift_px": null,
+        "max_rotation_deg": null
+      },
+      "notes": "Shot from a moving vehicle; background subtraction won't work.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    }
+  }
+}
