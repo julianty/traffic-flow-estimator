@@ -26,5 +26,36 @@ int main(int argc, char* argv[]) {
         cerr << "Capture failed for provided path " << file_path << endl;
         return 1;
     }
+
+    // Get next frame
+    cv::Mat img;
+    // Measure time
+    std::chrono::steady_clock clock;
+    std::chrono::time_point<std::chrono::steady_clock>  start = clock.now();
+    int frame_count = 0;
+    while (cap.read(img)) {
+        // Increment frame count
+        frame_count++;
+        // Draw next frame
+        cv::imshow("main", img);
+        // Calculate frame time
+        double frame_time_ms = 1000 / cap.get(cv::CAP_PROP_FPS);
+        int wait = cv::waitKey(static_cast<int>(frame_time_ms));
+        // Listen for stop key
+        if (wait == 27 || wait == 113 || wait == 81) {
+            // ESC = 27, q = 113, Q = 81
+            // Exit the loop
+            break;
+        }
+    }
+
+    // Report timings
+    std::chrono::time_point<std::chrono::steady_clock>  stop = clock.now();
+    std::chrono::duration<double> dur = stop - start;
+    cout << "Run time: "  << dur.count() << endl;
+    cout << "Effective frame rate: "  << cap.get(cv::CAP_PROP_FRAME_COUNT) / dur.count() << endl;
+
+    // Cleanup
+    cv::destroyAllWindows();
     return 0;
 }
