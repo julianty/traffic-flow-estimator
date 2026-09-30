@@ -35,8 +35,13 @@
 - Build: VS Code default build task (`.vscode/tasks.json`, gitignored) with `-std=c++17 -IC:/msys64/ucrt64/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_highgui`; or `g++ ... $(pkg-config --cflags --libs opencv5)` in the UCRT64 terminal. Add `-lopencv_videoio -lopencv_video` for video/MOG2. Since `.vscode/` isn't versioned, a simple Makefile is worth adding — not urgent.
 
 ## Data
-- Source: YouTube traffic-camera footage, single fixed angle. No footage downloaded yet.
-- Note: keep raw video out of git (`.gitignore`); check licensing before making the repo public with embedded footage. `yt-dlp` for pulling clips.
+- Source: 6 Pexels clips downloaded by hand (Sep 30) into `source-videos/`. No trimming needed; all clips are 21–60 s.
+- **`source-videos/meta.json` is the source of truth** for per-clip metadata (URL, resolution/fps, camera stability, role, and placeholders for count line, mask regions, ground truth). Refer to clips by their alias there.
+  - **Main:** `auckland-hwy` (16516296): 1080p25, 60 s, tripod-stable, dense traffic with some overlap
+  - **Validation:** `auckland-fwy` (16516297): 1080p25, 90 s, tripod-stable, same creator as main (also Auckland), different framing. Tune on main, then check here without re-tuning.
+  - **Backup:** `urban-road` (14350696): 4K60, 37 s, tripod-stable, sparse traffic (easy case). Downscale before processing.
+  - Unused: `birdseye-4way` (drone drift/rotation), `motorway-vertical` (portrait, mild drift). Excluded: `skyline-hwy` (moving camera).
+- License: Pexels License. Free to use and modify, no attribution required, but no redistributing unaltered copies. Raw `.mp4`s stay out of git (`*.mp4` in `.gitignore`); `meta.json` is tracked.
 
 ## Reporting
 - Weekly progress report (informal, self + advisor updates) — every Sunday.
@@ -47,7 +52,7 @@
 
 | Week | Dates | Focus |
 |---|---|---|
-| 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull 1–2 short YouTube clips; git repo + this file ✅ |
+| 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull 1–2 short clips ✅ (Sep 30, Pexels); git repo + this file ✅ |
 | 2 | Sep 29–Oct 5 | Background subtraction running end-to-end on a sample clip; visualize foreground masks |
 | 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob |
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology) |
@@ -61,5 +66,5 @@
 
 ## Open questions
 - ~~OpenCV version/install method not yet decided~~ → resolved Sep 30: OpenCV 5.0.0 via MSYS2 UCRT64 pacman
-- Confirm `BackgroundSubtractorMOG2` location/API in OpenCV 5 (most tutorials are 4.x)
+- ~~Confirm `BackgroundSubtractorMOG2` location/API in OpenCV 5~~ → resolved Sep 30: still `cv::createBackgroundSubtractorMOG2` (and `KNN`) in the `video` module, declared in `opencv2/video/background_segm.hpp` (`/ucrt64/include/opencv5/...`). Link with `-lopencv_video`.
 - Exact line-crossing / counting-zone geometry not yet designed
