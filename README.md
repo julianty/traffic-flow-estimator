@@ -32,7 +32,9 @@ Early setup — see `CLAUDE.md` for the full project scope, roadmap, and weekly 
 
 ## Data
 
-Source footage is fixed-angle YouTube traffic-camera video, pulled with `yt-dlp`. Raw video is not checked into this repo (see `.gitignore`).
+Source footage is fixed-camera traffic video from [Pexels](https://www.pexels.com/), downloaded by hand. Each clip was checked for camera motion, since background subtraction needs a static camera. Per-clip metadata (source URL, resolution/fps, stability, role) lives in `source-videos/meta.json`: the main clip is `auckland-hwy`, the validation clip is `auckland-fwy`, and the backup is `urban-road`.
+
+Clips are used under the [Pexels License](https://www.pexels.com/license/) (free to use and modify, no attribution required, no redistributing unaltered copies), so the raw video is not checked into this repo (see `.gitignore`).
 
 ## Benchmark
 
