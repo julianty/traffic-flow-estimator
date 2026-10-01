@@ -32,7 +32,7 @@
   - HighGUI (`imshow`) needs Qt6 at runtime: `mingw-w64-ucrt-x86_64-qt6-5compat` (pacman lists it as optional, but it isn't for us)
   - `C:\msys64\ucrt64\bin` is on Windows PATH so exes run outside the UCRT64 terminal
 - ffmpeg — installed (came in as an OpenCV dependency)
-- Build: `Makefile` at repo root (tracked), one rule per exe, output in `build/`. Default target `build/main.exe` links `core`, `highgui`, `videoio` explicitly; **add `-lopencv_video` before using MOG2** (and `-lopencv_imgproc` once blur/morphology/`cvtColor` are used). `scratch/hello_opencv` still links everything via `pkg-config --libs opencv5`.
+- Build: `Makefile` at repo root (tracked), one rule per exe, output in `build/`. Default target `build/main.exe` links `core`, `highgui`, `videoio`, `video` (MOG2), `imgproc` (`resize`, `cvtColor`, `putText`) explicitly. `scratch/hello_opencv` still links everything via `pkg-config --libs opencv5`.
   - Ctrl+Shift+B (`.vscode/tasks.json`, gitignored) runs `make` through MSYS2 bash with `MSYSTEM=UCRT64`; setup details in `log.md` (9-30-26).
   - Switch to a pattern rule + `-MMD -MP` when the second `.cpp` (BFS, Week 3) or first header arrives.
 
@@ -55,7 +55,7 @@
 | Week | Dates | Focus |
 |---|---|---|
 | 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull footage ✅ (Sep 30, 6 Pexels clips, see `meta.json`); git repo + this file ✅ |
-| 2 | Sep 29–Oct 5 | Makefile + video playback/timing on `auckland-hwy` ✅ (Sep 30). Background subtraction running end-to-end on a sample clip; visualize foreground masks |
+| 2 | Sep 29–Oct 5 | Makefile + video playback/timing on `auckland-hwy` ✅ (Sep 30). MOG2 end-to-end + mask shown next to frame ✅ (Oct 1). Timing: headless pipeline is 13.2 ms/frame at 1080p, 4.5 ms at 540p; display was ~80% of interactive cost ✅. Pause/quit controls + frame counter ✅. Left: run playback test cases, measure warm-up frames, log + weekly report (Sun Oct 4) |
 | 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob |
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology) |
 | 5 | Oct 20–26 | Naive centroid tracking + line-crossing counting → first end-to-end counts |
@@ -70,4 +70,9 @@
 - ~~OpenCV version/install method not yet decided~~ → resolved Sep 30: OpenCV 5.0.0 via MSYS2 UCRT64 pacman
 - ~~Confirm `BackgroundSubtractorMOG2` location/API in OpenCV 5~~ → resolved Sep 30: still `cv::createBackgroundSubtractorMOG2` (and `KNN`) in the `video` module, declared in `opencv2/video/background_segm.hpp` (`/ucrt64/include/opencv5/...`). Link with `-lopencv_video`.
 - Exact line-crossing / counting-zone geometry not yet designed (store it in `meta.json` → `annotations.count_line`)
-- MOG2 settings: shadow detection on/off (shadows = 127 in the mask), warm-up frames before trusting the mask, downscale factor (1080p playback alone is ~19 ms of the 40 ms/frame budget)
+- ~~MOG2 shadow detection~~ → resolved Oct 1: `detectShadows = true`; threshold to a separate binary mask (only 255 = foreground) before BFS
+- Downscale factor: **optional** for the pipeline (headless 1080p = 13.2 ms/frame, fits the 40 ms budget); needed only for interactive display. Keep as one variable `s` (`INTER_AREA`, before MOG2); decide 1.0 vs 0.5 in Week 4 on mask/blob accuracy. Timing table in `log.md`
+- Warm-up: how many frames before counting starts (phantom-car ghost from frame 1); measure with the frame counter
+- Count-line coordinates: scale down once at startup vs. scale results up per frame (`meta.json` stays full-res)
+- Display flag (headless for benchmarks/counts, display for debugging); headless read-only run for decode's share; MOG2 on grayscale (see `log.md` 10-1-26)
+- Step forward/back controls: forward is simple; back needs a circular buffer (MOG2 can't un-learn). Optional

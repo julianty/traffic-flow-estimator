@@ -1,59 +1,118 @@
 #include <iostream>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include <opencv2/video/background_segm.hpp>
+#include <opencv2/imgproc.hpp>
 
-using namespace std;
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        cerr << "Usage: main <video_path>" << endl;
+        std::cerr << "Usage: main <video_path>" << std::endl;
         return 1;
     }
-    string file_path = argv[1];
+    std::string file_path = argv[1];
 
     // Load file from path
     cv::VideoCapture cap = cv::VideoCapture(file_path);
     // Test for successful path open
     if (cap.isOpened()) {
-        cout << "Capture Live" << endl;
+        std::cout << "Capture Live" << std::endl;
         // Print video properties
-        cout << "W: " << cap.get(cv::CAP_PROP_FRAME_WIDTH) 
-            << " H: " << cap.get(cv::CAP_PROP_FRAME_HEIGHT) << endl;
-        cout << "Frame count: " << cap.get(cv::CAP_PROP_FRAME_COUNT) << endl;
-        cout << "Frame rate: " << cap.get(cv::CAP_PROP_FPS) << endl;
-        cout << "Duration (sec): " << cap.get(cv::CAP_PROP_FRAME_COUNT) / cap.get(cv::CAP_PROP_FPS) << endl;
+        std::cout << "W: " << cap.get(cv::CAP_PROP_FRAME_WIDTH) 
+            << " H: " << cap.get(cv::CAP_PROP_FRAME_HEIGHT) << std::endl;
+        std::cout << "Frame count: " << cap.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
+        std::cout << "Frame rate: " << cap.get(cv::CAP_PROP_FPS) << std::endl;
+        std::cout << "Duration (sec): " << cap.get(cv::CAP_PROP_FRAME_COUNT) / cap.get(cv::CAP_PROP_FPS) << std::endl;
     } else {
-        cerr << "Capture failed for provided path " << file_path << endl;
+        std::cerr << "Capture failed for provided path " << file_path << std::endl;
         return 1;
     }
 
-    // Get next frame
-    cv::Mat img;
-    // Measure time
+    // Measure time (start stopwatch)
     std::chrono::steady_clock clock;
     std::chrono::time_point<std::chrono::steady_clock>  start = clock.now();
+    
+    // Keep a frame count for metrics later
     int frame_count = 0;
-    while (cap.read(img)) {
+    
+    // Instantiate img array
+    cv::Mat img;
+    // Instantiate resize array
+    cv::Mat imgScaled;
+    // Initialize the MOG2 background subtractor
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2(500, 16.0, true);
+    // Initialize mask object
+    cv::Mat mask;
+
+
+    // Main loop
+    bool quit = false;
+    double scale = 0.5;
+    while (!quit && cap.read(img)) {
+        // Resize image
+        cv::resize(img, imgScaled, cv::Size(), scale, scale, cv::INTER_AREA);
+
+        // Run MOG2
+        mog2->apply(imgScaled, mask);
+
         // Increment frame count
         frame_count++;
-        // Draw next frame
-        cv::imshow("main", img);
+
+        // Convert mask into 3 channel
+        cv::Mat mask3c;
+        cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2RGB, 3);
+
+        // Concat the img and mask
+        // cv::Mat frame;
+        // cv::hconcat(imgScaled, mask3c, frame);
+
+        // // Draw next frame
+        // cv::putText(frame, "Frame: " + std::to_string(frame_count), 
+        //             {1730,500}, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
+        //             {0, 255, 0}, 2);
+        // cv::imshow("main", frame);
+
         // Calculate frame time
         double frame_time_ms = 1000 / cap.get(cv::CAP_PROP_FPS);
-        int wait = cv::waitKey(static_cast<int>(frame_time_ms));
+        // int wait = cv::waitKey(static_cast<int>(frame_time_ms));
+
+        int wait = cv::waitKey(1);
         // Listen for stop key
         if (wait == 27 || wait == 113 || wait == 81) {
             // ESC = 27, q = 113, Q = 81
             // Exit the loop
-            break;
+            quit = true;
+        }
+        // Listen for pause key
+        if (wait == 32) {
+            // SPACEBAR = 32
+            // Enter wait loop
+            while (1) {
+                int pauseKey = cv::waitKey(0);
+                
+                // When a key is pressed:
+                if (pauseKey == 32) {
+                    // Resume loop
+                    break;
+                } else if (pauseKey == 27 || pauseKey == 113 || pauseKey== 81) {
+                    // ESC = 27, q = 113, Q = 81
+                    // Exit the loop
+                    quit = true;
+                    break;
+                } else {
+                    // non-mapped key, continue in loop
+                    std::cout << "Press 'q', 'SPACEBAR', or 'ESC'" << std::endl;
+                    continue;
+                }
+            }
         }
     }
 
     // Report timings
     std::chrono::time_point<std::chrono::steady_clock>  stop = clock.now();
     std::chrono::duration<double> dur = stop - start;
-    cout << "Run time: "  << dur.count() << endl;
-    cout << "Effective frame rate: "  << cap.get(cv::CAP_PROP_FRAME_COUNT) / dur.count() << endl;
+    std::cout << "Run time: "  << dur.count() << std::endl;
+    std::cout << "Effective frame rate: "  << frame_count / dur.count() << std::endl;
 
     // Cleanup
     cv::destroyAllWindows();
