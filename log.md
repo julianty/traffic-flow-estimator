@@ -200,7 +200,24 @@ Checks
 - Display-mode playback list not yet re-run after the `handleInput` change (esp. space -> other key -> stays paused)
 
 Open
-- Font size scaled with frame height; skip `resize` when scale == 1.0
+- ~~Font size scaled with frame height; skip `resize` when scale == 1.0~~ -> done 10-4 (see below)
 - Add `-Wall -Wextra` to the Makefile + swap `opencv2/opencv.hpp` for specific headers
 - Re-run the display-mode playback list
 - Measure warm-up N; headless read-only timing for decode's share; MOG2 on grayscale
+
+### 10-4-26 (Week 2: resize skip + scaled frame counter):
+
+Skip `resize` at scale 1.0
+- `process` does `imgScaled = img` (shallow copy: header + refcount, shared pixels, no copy) when `scale == 1.0`. Exact `==` on a double is safe here: 1.0 is exactly representable and comes straight from the default / `stod`, no arithmetic in between
+- Aliasing rule: at 1.0, `imgScaled` *is* `img`. Fine today (MOG2 only reads it, `hconcat` copies it, next `cap.read` comes after we're done). **Never draw on pipeline images (`img`, `imgScaled`, `mask`); draw only on the display image `frame`.** Drawing on `imgScaled` before `apply` would feed boxes/text to MOG2 at any scale (matters for Week 3 bounding boxes)
+- Headless @1.0: 19.2 s / 18.9 s = 12.6-12.8 ms/frame (was 13.1-13.7). The resize at factor 1 cost ~0.5-1 ms/frame. @0.5 unchanged (4.4 ms)
+
+Frame counter scaled with frame size
+- Reference values tuned at 540p as `constexpr` (`refFrameHeight = 540`, `refFontScale = 1.2`, `refFontWt = 2`, `refMargin = 20`); `ratio = frame.rows / 540.0` scales font scale, thickness and margin
+- Thickness is an `int` px: `std::max(1, lround(2 * ratio))`. Passing the `double` product truncated silently and could hit 0 (invalid) on small frames
+- Position from `cv::getTextSize` (returns width/height; baseline via an out-param): `x = cols - textWidth - margin`, `y = rows - margin - baseline`. `putText`'s origin is the bottom-left of the **baseline**, not the top-left; descenders hang below by `baseline`
+- Measures a fixed sample `"Frame: 0000"`, not the live string, so the right-aligned text doesn't slide left as digits are added (longest clip is 2255 frames)
+- Font face is one named constant so measure and draw can't disagree
+- Gotcha: `getTextSize` result was first discarded (call with no assignment), so the hardcoded 220 was still used
+- IntelliSense flags `getTextSize` ("no instance of overloaded function matches"): false positive. OpenCV 5 added a second overload (`Rect getTextSize(Size imgsize, const String& text, Point org, ...)`, `imgproc.hpp` ~4402). g++ compiles cleanly with `-Wall -Wextra`
+- Display checked at 0.5 and 1.0: counter bottom-right of the mask half, same relative size

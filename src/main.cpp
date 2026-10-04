@@ -5,17 +5,31 @@
 #include <opencv2/imgproc.hpp>
 #include"args.hpp"
 #include <chrono>
+#include <algorithm>
+#include <cmath>
 
 namespace {
     // Parameter order (both functions): inputs, then outputs
     void process(const cv::Mat& img, const cv::Ptr<cv::BackgroundSubtractorMOG2>& mog2, double scale,
                  cv::Mat& imgScaled, cv::Mat& mask) {
-        // Resize image
-        cv::resize(img, imgScaled, cv::Size(), scale, scale, cv::INTER_AREA);
+        // Exact == is safe: 1.0 is exactly representable and comes straight from the default / stod
+        if (scale == 1.0) {
+            // Shallow copy: shares img's pixels, so never draw on imgScaled
+            imgScaled = img;
+        } else {
+            // Resize image
+            cv::resize(img, imgScaled, cv::Size(), scale, scale, cv::INTER_AREA);
+        }
 
         // Run MOG2
         mog2->apply(imgScaled, mask);
     }
+    constexpr double refFontScale = 1.2;
+    constexpr int refFontWt = 2;
+    constexpr int refFrameHeight = 540;
+    constexpr int refMargin = 20;
+    constexpr int counterFont = cv::FONT_HERSHEY_SIMPLEX;
+    constexpr const char* counterSample = "Frame: 0000";  // clips are <= 2255 frames
     void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count,
                 cv::Mat& mask3c, cv::Mat& frame) {
         // Convert mask into 3 channel
@@ -24,11 +38,20 @@ namespace {
         // Concat the img and mask
         cv::hconcat(imgScaled, mask3c, frame);
 
-        // Draw frame counter
-        cv::Point2d frameCtCoords = cv::Point2d(frame.cols - 220, frame.rows - 30);
-        cv::putText(frame, "Frame: " + std::to_string(frame_count), 
-            frameCtCoords, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
-            {0, 255, 0}, 2);
+        // Draw frame counter, sized relative to a 540p frame
+        double ratio = static_cast<double>(frame.rows) / refFrameHeight;
+        double fontScale = refFontScale * ratio;
+        int fontWt = std::max(1, static_cast<int>(std::lround(refFontWt * ratio)));
+        int margin = static_cast<int>(std::lround(refMargin * ratio));
+
+        // Measure a fixed-width sample so the text doesn't shift left as digits are added
+        int baseline = 0;
+        cv::Size textSize = cv::getTextSize(counterSample, counterFont, fontScale, fontWt, &baseline);
+        // putText's origin is the bottom-left of the baseline; descenders hang below by `baseline`
+        cv::Point frameCtCoords(frame.cols - textSize.width - margin, frame.rows - margin - baseline);
+        cv::putText(frame, "Frame: " + std::to_string(frame_count),
+            frameCtCoords, counterFont, fontScale, {0, 255, 0}, fontWt);
+
         // Draw next frame
         cv::imshow("main", frame);
 
