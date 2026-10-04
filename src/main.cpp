@@ -8,6 +8,7 @@
 
 
 int main(int argc, char* argv[]) {
+    // Parse arguments
     InputFlags flags;
     try {
         flags = argParse(argc, argv);
@@ -76,8 +77,9 @@ int main(int argc, char* argv[]) {
             cv::hconcat(imgScaled, mask3c, frame);
     
             // Draw next frame
+            cv::Point2d frameCtCoords = cv::Point2d(frame.cols - 220, frame.rows - 30);
             cv::putText(frame, "Frame: " + std::to_string(frame_count), 
-                        {1730,500}, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
+                        frameCtCoords, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
                         {0, 255, 0}, 2);
             cv::imshow("main", frame);
             int wait = cv::waitKey(1);
