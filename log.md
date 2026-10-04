@@ -121,5 +121,55 @@ Open
 - Step forward (right arrow) while paused: one normal iteration, stay paused. Arrow keys need `waitKeyEx`; print the codes, Qt backend may differ from the Win32 values online. Pull per-frame work into a function
 - Step back (left arrow): MOG2 can't un-learn, so seeking back gives a different mask. Options: re-run from frame 0 (slow) or circular buffer of the last N frames+masks (~2 MB/frame at 540p; must `clone()` into the buffer or every entry aliases the reused Mats). Optional
 - Timing gaps: headless read-only (`cap.read` only) for decode's share; repeat key runs 2-3x; MOG2 on grayscale input
-- Make display optional via a flag instead of commenting code out; make the scale factor a variable (also fixes the hardcoded putText position)
-- Qt `QThreadStorage` message at exit: still to check
+- ~~Make display optional via a flag; make the scale factor a variable~~ -> done 10-4 (`--headless`, `--scale`)
+- ~~Qt `QThreadStorage` message at exit~~ -> checked 10-4: harmless, see below
+
+### 10-3-26 / 10-4-26 (Week 2: refactor, CLI flags, headless mode):
+
+CLI flags (hand-rolled, `src/args.hpp` / `src/args.cpp`)
+- Usage: `main.exe --video_path <file> [--headless] [--scale <s>]`, `0 < s <= 1`, default scale 1.0. Replaces `argv[1]`
+- Considered CLI11 / cxxopts (both in UCRT64 pacman) and `cv::CommandLineParser` (already linked via core); hand-rolled since there are only 3 options and one program
+- Pattern: `InputFlags` struct with defaults in the member declarations; loop over `argv` from 1; flags that take a value use `getNextArg` (bounds check, then `++i` on the caller's index, so `i` is passed by reference); unknown args throw; required/range checks after the loop
+- Errors: everything thrown out of `argParse` is a `std::runtime_error`; one catch in `main` prints the message + `printUsage(argv[0])`, returns 1
+- `getNextArg` is file-private: anonymous namespace in `args.cpp` (internal linkage; never put one in a header). Leading-underscore names are reserved at global scope in C++ (Python habit doesn't carry over)
+- Gotchas
+  - `char*` == `char*` compares addresses; wrap `argv[i]` in `std::string` first
+  - `std::stod` throws `invalid_argument` / `out_of_range`, which are `logic_error`, not `runtime_error`; a `catch (runtime_error&)` misses them -> `std::terminate`. Wrap: catch `std::exception` around only the `stod`, rethrow as `runtime_error` naming the flag and value
+  - `stod("0.5abc")` returns 0.5 silently; check the `pos` out-param equals the string length
+  - A catch catches your own throws too: the range check inside the `try` got rewrapped as "expects a number". Keep the try around only the call being translated
+  - "Required" can only be checked after the loop (a check inside the `--video_path` branch never runs when the flag is missing)
+  - Catch block must return; printing and continuing opened an empty path and buried the real error under GStreamer warnings
+- Tested: no args, `--headless` only, `--video_path`/`--scale` with no value, `--scale abc`, `--scale 0.5abc`, `--scale 0/2/-1`, `--bogus`: each one clean line + usage, exit 1. Bad path still gets GStreamer warnings (parse OK, OpenCV rejects the file); passing `cv::CAP_FFMPEG` to `VideoCapture` would skip GStreamer
+
+Build: first multi-file build
+- Kept the Makefile simple: one rule, prerequisites list `main.cpp`, `args.cpp` **and** `args.hpp` (manual stand-in for `-MMD`, so a header edit rebuilds), `g++` line names both `.cpp` files (`$<` = first prereq only -> undefined reference; `$^` would pass the header to g++). Every change recompiles everything; fine at this size
+- Header holds the struct + declarations only (`#pragma once`); bodies in the `.cpp`. Body in a header included twice = multiple definition; missing `.cpp` in the build = undefined reference
+
+Headless mode (`--headless`)
+- Display (`cvtColor`, `hconcat`, `putText`, `imshow`) and all key handling moved behind `!flags.headless`; headless skips `waitKey` too (no window, so no keys; Ctrl+C only). `mask3c` / `frame` moved out of the loop (no per-frame allocation)
+- Removed the unused per-frame `frame_time_ms` (`cap.get(FPS)` every frame)
+- Bug caught: a leftover local `double scale = 0.5;` overrode the flag, so `--scale` silently did nothing
+
+Timing after refactor (auckland-hwy, 1500 frames, single runs)
+
+| Scale | Mode | Run time | ms/frame | Before (10-1) |
+|---|---|---|---|---|
+| 1.0 | headless | 19.6 s | 13.1 | 13.2 |
+| 0.5 | headless | 6.8 s | 4.5 | 4.5 |
+
+- Pipeline unchanged by the refactor. Dropping the headless `cvtColor` saved <= 0.1 ms/frame: within noise, not a real speedup
+- At 1.0, `resize` still runs (a full-frame copy for nothing); skip it when scale == 1.0
+- Display run on `auckland-fwy` (validation clip, 2255 frames, 90 s) at 0.5: 36.1 s = 16.0 ms/frame (62.5 fps). Not comparable to the auckland-hwy 22.2 ms (different clip/content); playback only, no tuning on the validation clip
+- Display at the default scale 1.0 is a 3840x1080 window (wider than the monitor); use `--scale 0.5` for interactive runs
+
+Playback controls: pause/resume and quit re-tested after the refactor, working
+
+Frame counter position
+- Now `scale * (3460, 1000)`: correct for both scales on 1080p sources, but still tied to source resolution (a 4K source at 0.5 is 3840x1080 per pair and puts the text mid-frame). Next: derive from `frame.cols` / `frame.rows`, scale the font size too
+
+Qt `QThreadStorage: entry N destroyed before end of thread` at exit: still printed with `cv::destroyAllWindows()` called, so that doesn't silence it. Shutdown-order noise from the Qt6 HighGUI backend; harmless, leaving it
+
+Open
+- Refactor Step 2 leftovers: counter position/font from frame size; skip `resize` at scale 1.0
+- Refactor Step 3: extract process / render / input functions (output Mats by non-const reference; key codes as named constants; input handler returns an action, enum if step-forward comes)
+- Measure warm-up N; headless read-only timing for decode's share; MOG2 on grayscale

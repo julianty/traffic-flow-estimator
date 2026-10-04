@@ -25,6 +25,9 @@
 - Background subtraction itself — OpenCV `BackgroundSubtractorMOG2`/`KNN`
 - Video decode/I/O, basic image preprocessing (blur, morphological ops)
 
+## Working style
+- **Navigator mode by default:** Julian writes the code. Give detailed plain-English guidance and reviews (most important issues first, no rewrites). Only write code when explicitly asked ("show me", "write X for me"). Building and running tests to verify his code is welcome.
+
 ## Tech stack
 - C++17, g++, VS Code (current setup — works fine, no need to change)
 - OpenCV 5.0.0 — installed via MSYS2 UCRT64 (`pacman -S mingw-w64-ucrt-x86_64-opencv`), verified Sep 30 with `scratch/hello_opencv.cpp`
@@ -34,7 +37,14 @@
 - ffmpeg — installed (came in as an OpenCV dependency)
 - Build: `Makefile` at repo root (tracked), one rule per exe, output in `build/`. Default target `build/main.exe` links `core`, `highgui`, `videoio`, `video` (MOG2), `imgproc` (`resize`, `cvtColor`, `putText`) explicitly. `scratch/hello_opencv` still links everything via `pkg-config --libs opencv5`.
   - Ctrl+Shift+B (`.vscode/tasks.json`, gitignored) runs `make` through MSYS2 bash with `MSYSTEM=UCRT64`; setup details in `log.md` (9-30-26).
-  - Switch to a pattern rule + `-MMD -MP` when the second `.cpp` (BFS, Week 3) or first header arrives.
+  - Julian keeps the Makefile deliberately simple: a single rule compiles every `.cpp` in one `g++` call (no `.o` files). The prerequisites list every `.cpp` **and every header** by hand (manual stand-in for `-MMD`), and the `g++` line names each `.cpp` explicitly (`$<` would drop files, `$^` would pass headers). Add new files to both lists (e.g. `ccl.cpp`/`ccl.hpp` in Week 3). Move to per-file `.o` rules / pattern rule + `-MMD -MP` only if rebuilds get slow or a forgotten header causes a stale build.
+- Running exes from Git Bash needs `/c/msys64/ucrt64/bin` on `PATH` (otherwise they exit silently, missing DLLs).
+
+## Code layout
+- `src/main.cpp`: capture, MOG2 loop, display, key controls.
+- `src/args.hpp` / `src/args.cpp`: hand-rolled CLI parsing (Julian chose this over CLI11/cxxopts/`cv::CommandLineParser`). `InputFlags` struct (`video_path`, `headless`, `scale`, default 1.0), `argParse` throws `std::runtime_error` on any bad input (one catch in `main` prints the error + `printUsage`, returns 1). `getNextArg` is file-private (anonymous namespace).
+- Usage: `main.exe --video_path <file> [--headless] [--scale <s>]`, `0 < s <= 1`. Headless skips all display work and `waitKey` (no pause/quit; Ctrl+C only).
+- Display at the default scale 1.0 is a 3840x1080 window (too wide); use `--scale 0.5` for interactive runs.
 
 ## Data
 - Source: 6 Pexels clips downloaded by hand (Sep 30) into `source-videos/`. No trimming needed; all clips are 21–60 s.
@@ -46,7 +56,7 @@
 - License: Pexels License. Free to use and modify, no attribution required, but no redistributing unaltered copies. Raw `.mp4`s stay out of git (`*.mp4` in `.gitignore`); `meta.json` is tracked.
 
 ## Reporting
-- Weekly progress report (informal, self + advisor updates) — every Sunday.
+- Weekly progress report (informal, self + advisor updates) — every Sunday. Saved as `reports/week-NN.md`.
 - Formal write-up at the end, for Julian's own record.
 - Candidate automation: Claude Code Desktop's **local scheduled tasks** (Routines page, or `/schedule` in a session) — e.g. a weekly prompt that reads the week's commits/diffs and drafts a progress-report entry. Requires the Desktop app open and the machine awake to fire. If you want it to run even when your machine is off, use a **cloud routine** instead of a local task.
 
@@ -55,7 +65,7 @@
 | Week | Dates | Focus |
 |---|---|---|
 | 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull footage ✅ (Sep 30, 6 Pexels clips, see `meta.json`); git repo + this file ✅ |
-| 2 | Sep 29–Oct 5 | Makefile + video playback/timing on `auckland-hwy` ✅ (Sep 30). MOG2 end-to-end + mask shown next to frame ✅ (Oct 1). Timing: headless pipeline is 13.2 ms/frame at 1080p, 4.5 ms at 540p; display was ~80% of interactive cost ✅. Pause/quit controls + frame counter ✅. Left: run playback test cases, measure warm-up frames, log + weekly report (Sun Oct 4) |
+| 2 | Sep 29–Oct 5 | Makefile + video playback/timing on `auckland-hwy` ✅ (Sep 30). MOG2 end-to-end + mask shown next to frame ✅ (Oct 1). Timing: headless pipeline is 13.2 ms/frame at 1080p, 4.5 ms at 540p; display was ~80% of interactive cost ✅. Pause/quit controls + frame counter ✅. Refactor (Oct 3–4): CLI flags `--video_path/--headless/--scale` in `src/args.*` ✅, display behind `!headless` ✅ (headless timings unchanged: 13.1 ms @1.0, 4.5 ms @0.5). Left: Step 2 of refactor (scale-aware `putText` position/font, skip `resize` when scale = 1.0), Step 3 (extract process/render/input functions; pass output Mats by non-const ref; key-code constants), measure warm-up frames. Pause/quit re-tested after refactor ✅; log ✅ + weekly report ✅ (`reports/week-02.md`, Oct 4) |
 | 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob |
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology) |
 | 5 | Oct 20–26 | Naive centroid tracking + line-crossing counting → first end-to-end counts |
@@ -74,5 +84,6 @@
 - Downscale factor: **optional** for the pipeline (headless 1080p = 13.2 ms/frame, fits the 40 ms budget); needed only for interactive display. Keep as one variable `s` (`INTER_AREA`, before MOG2); decide 1.0 vs 0.5 in Week 4 on mask/blob accuracy. Timing table in `log.md`
 - Warm-up: how many frames before counting starts (phantom-car ghost from frame 1); measure with the frame counter
 - Count-line coordinates: scale down once at startup vs. scale results up per frame (`meta.json` stays full-res)
-- Display flag (headless for benchmarks/counts, display for debugging); headless read-only run for decode's share; MOG2 on grayscale (see `log.md` 10-1-26)
+- ~~Display flag~~ → done Oct 4 (`--headless`). Still open: headless read-only run for decode's share; MOG2 on grayscale (see `log.md` 10-1-26)
+- Optional: pass `cv::CAP_FFMPEG` to `VideoCapture` to skip GStreamer (noisy warnings on bad paths; makes the timed decoder explicit)
 - Step forward/back controls: forward is simple; back needs a circular buffer (MOG2 can't un-learn). Optional
