@@ -4,8 +4,66 @@
 #include <opencv2/video/background_segm.hpp>
 #include <opencv2/imgproc.hpp>
 #include"args.hpp"
+#include <chrono>
 
+namespace {
+    // Parameter order (both functions): inputs, then outputs
+    void process(const cv::Mat& img, const cv::Ptr<cv::BackgroundSubtractorMOG2>& mog2, double scale,
+                 cv::Mat& imgScaled, cv::Mat& mask) {
+        // Resize image
+        cv::resize(img, imgScaled, cv::Size(), scale, scale, cv::INTER_AREA);
 
+        // Run MOG2
+        mog2->apply(imgScaled, mask);
+    }
+    void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count,
+                cv::Mat& mask3c, cv::Mat& frame) {
+        // Convert mask into 3 channel
+        cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2BGR, 3);
+
+        // Concat the img and mask
+        cv::hconcat(imgScaled, mask3c, frame);
+
+        // Draw frame counter
+        cv::Point2d frameCtCoords = cv::Point2d(frame.cols - 220, frame.rows - 30);
+        cv::putText(frame, "Frame: " + std::to_string(frame_count), 
+            frameCtCoords, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
+            {0, 255, 0}, 2);
+        // Draw next frame
+        cv::imshow("main", frame);
+
+    }
+    enum class KeyAction { Continue, Quit };
+    constexpr int KEY_ESC = 27;
+    constexpr int KEY_SPACE = ' ';
+    bool isQuitKey(int keyCode) {return keyCode == KEY_ESC || keyCode == 'q' || keyCode == 'Q';}
+    KeyAction handleInput() {
+        int wait = cv::waitKey(1);
+        // Listen for stop key
+        if (isQuitKey(wait)) {
+            return KeyAction::Quit;
+        }
+        // Listen for pause key
+        if (wait == KEY_SPACE) {
+            // Enter wait loop
+            while (1) {
+                int pauseKey = cv::waitKey(0);
+                
+                // When a key is pressed:
+                if (pauseKey == KEY_SPACE) {
+                    // Resume loop
+                    break;
+                } else if (isQuitKey(pauseKey)) {
+                    return KeyAction::Quit;
+                } else {
+                    // non-mapped key, continue in loop
+                    std::cout << "Press 'q', 'SPACEBAR', or 'ESC'" << std::endl;
+                }
+            }
+        }
+        return KeyAction::Continue;
+    }
+} // namespace
 
 int main(int argc, char* argv[]) {
     // Parse arguments
@@ -36,8 +94,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Measure time (start stopwatch)
-    std::chrono::steady_clock clock;
-    std::chrono::time_point<std::chrono::steady_clock>  start = clock.now();
+    auto start = std::chrono::steady_clock::now();
     
     // Keep a frame count for metrics later
     int frame_count = 0;
@@ -57,60 +114,19 @@ int main(int argc, char* argv[]) {
 
 
     // Main loop
-    bool quit = false;
-    while (!quit && cap.read(img)) {
-        // Resize image
-        cv::resize(img, imgScaled, cv::Size(), flags.scale, flags.scale, cv::INTER_AREA);
-
-        // Run MOG2
-        mog2->apply(imgScaled, mask);
-
-        // Increment frame count
+    while (cap.read(img)) {
+        // Reize and apply mog2
+        process(img, mog2, flags.scale, imgScaled, mask);
         frame_count++;
 
-
         if (!flags.headless) {
-            // Convert mask into 3 channel
-            cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2RGB, 3);
-    
-            // Concat the img and mask
-            cv::hconcat(imgScaled, mask3c, frame);
-    
             // Draw next frame
-            cv::Point2d frameCtCoords = cv::Point2d(frame.cols - 220, frame.rows - 30);
-            cv::putText(frame, "Frame: " + std::to_string(frame_count), 
-                        frameCtCoords, cv::FONT_HERSHEY_SIMPLEX, 1.2, 
-                        {0, 255, 0}, 2);
-            cv::imshow("main", frame);
-            int wait = cv::waitKey(1);
-            // Listen for stop key
-            if (wait == 27 || wait == 113 || wait == 81) {
-                // ESC = 27, q = 113, Q = 81
-                // Exit the loop
-                quit = true;
-            }
-            // Listen for pause key
-            if (wait == 32) {
-                // SPACEBAR = 32
-                // Enter wait loop
-                while (1) {
-                    int pauseKey = cv::waitKey(0);
-                    
-                    // When a key is pressed:
-                    if (pauseKey == 32) {
-                        // Resume loop
-                        break;
-                    } else if (pauseKey == 27 || pauseKey == 113 || pauseKey== 81) {
-                        // ESC = 27, q = 113, Q = 81
-                        // Exit the loop
-                        quit = true;
-                        break;
-                    } else {
-                        // non-mapped key, continue in loop
-                        std::cout << "Press 'q', 'SPACEBAR', or 'ESC'" << std::endl;
-                        continue;
-                    }
-                }
+            render(imgScaled, mask, frame_count, mask3c, frame);
+
+            // Handle any inputs
+            KeyAction action = handleInput();
+            if (action == KeyAction::Quit) {
+                break;
             }
         }
 
@@ -118,8 +134,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Report timings
-    std::chrono::time_point<std::chrono::steady_clock>  stop = clock.now();
-    std::chrono::duration<double> dur = stop - start;
+    std::chrono::duration<double> dur = std::chrono::steady_clock::now() - start;
     std::cout << "Run time: "  << dur.count() << std::endl;
     std::cout << "Effective frame rate: "  << frame_count / dur.count() << std::endl;
 
