@@ -46,7 +46,7 @@ namespace {
         // Listen for pause key
         if (wait == KEY_SPACE) {
             // Enter wait loop
-            while (1) {
+            while (true) {
                 int pauseKey = cv::waitKey(0);
                 
                 // When a key is pressed:
@@ -112,7 +112,6 @@ int main(int argc, char* argv[]) {
     // Initialize frame
     cv::Mat frame;
 
-
     // Main loop
     while (cap.read(img)) {
         // Reize and apply mog2
@@ -129,8 +128,6 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-
-
     }
 
     // Report timings
