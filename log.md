@@ -170,6 +170,37 @@ Frame counter position
 Qt `QThreadStorage: entry N destroyed before end of thread` at exit: still printed with `cv::destroyAllWindows()` called, so that doesn't silence it. Shutdown-order noise from the Qt6 HighGUI backend; harmless, leaving it
 
 Open
-- Refactor Step 2 leftovers: counter position/font from frame size; skip `resize` at scale 1.0
-- Refactor Step 3: extract process / render / input functions (output Mats by non-const reference; key codes as named constants; input handler returns an action, enum if step-forward comes)
+- ~~Refactor Step 2 leftovers~~ -> position done 10-4 (see below); font size and resize skip still open
+- ~~Refactor Step 3~~ -> done 10-4 (see below)
+- Measure warm-up N; headless read-only timing for decode's share; MOG2 on grayscale
+
+### 10-4-26 (Week 2: refactor loop into functions):
+
+Loop body is now `process` -> `frame_count++` -> (display only) `render` -> `handleInput`. All three are file-private (anonymous namespace in `main.cpp`). Parameter order rule for both Mat functions: inputs first, then outputs (OpenCV style)
+
+- `process(img, mog2, scale, imgScaled, mask)`: resize + MOG2 `apply`. BFS goes here next
+- `render(imgScaled, mask, frame_count, mask3c, frame)`: `cvtColor` (now `GRAY2BGR`, matching OpenCV's BGR convention; output identical for gray input), `hconcat`, `putText`, `imshow`. No `waitKey` (input's job; `imshow` paints during the next `waitKey`, so render must come before input)
+- `handleInput()` returns `enum class KeyAction { Continue, Quit }`. Pause loop uses `return` instead of `break` + flag, so the `quit` flag is gone; main loop is `while (cap.read(img))` and `break`s on `Quit` (still no extra decode after quitting)
+- Key codes: `constexpr int KEY_ESC = 27`, `KEY_SPACE = ' '`; `'q'`/`'Q'` as char literals (a char literal is its ASCII code). `isQuitKey(int)` dedupes the Esc/q/Q check. Plain constants, not an enum class, because `waitKey` returns `int` and an enum class won't compare to it. Numbers stay inside `handleInput`, only meanings come out
+- Frame counter anchored to `(frame.cols - 220, frame.rows - 30)`: works for any source resolution and scale. Font size still fixed at 1.2
+- Stopwatch: `auto start = std::chrono::steady_clock::now()` (static member, called on the type with `::`; no clock object). `dur` keeps the explicit `duration<double>`: that's what converts to seconds. With `auto` it would stay integer nanoseconds and the fps would be off by 1e9. Added `#include <chrono>` (was only arriving through OpenCV)
+
+Gotchas
+- Scope: a function sees only its params/locals/globals; `main`'s Mats must be passed in. Outputs by non-const `&` (a reference is the caller's object, and keeping the Mats in `main` lets `resize`/`apply` reuse their buffers every frame)
+- `const cv::Mat&` as an OpenCV output **compiles** (`OutputArray` accepts it) but fails at runtime on the first frame: `(-215:Assertion failed) !fixedSize() || ...size == _sz in function 'create'`. `fixedSize()` in an assertion = a const Mat passed as an output
+- `const cv::Ptr<T>&` still allows `mog2->apply` (const pointer, not const pointee; like `T* const` vs `const T*`)
+- Non-void function with a path that reaches `}` without a `return` = undefined behavior (garbage return value, random quits), only a warning (`-Wall`). Hit by the no-key path (almost every frame) and by space-resume `break`
+- Returning `Continue` for "other key while paused" silently resumed playback; that branch must only print the hint and keep looping
+- `if (cond) return true; else return false;` -> just `return cond;`
+- `.` is for objects, `::` for types/namespaces/static members: `steady_clock.now()` doesn't compile
+
+Checks
+- `-Wall -Wextra`: no warnings from our code. Two `multi-line comment` warnings from OpenCV's `photo/ccm.hpp`, pulled in by the `opencv2/opencv.hpp` umbrella header; replacing it with the specific headers silences them
+- Headless after the refactor: 13.7 ms/frame @1.0, 4.4-4.7 ms @0.5 (single runs; vs 13.1 / 4.5 before, within run-to-run noise)
+- Display-mode playback list not yet re-run after the `handleInput` change (esp. space -> other key -> stays paused)
+
+Open
+- Font size scaled with frame height; skip `resize` when scale == 1.0
+- Add `-Wall -Wextra` to the Makefile + swap `opencv2/opencv.hpp` for specific headers
+- Re-run the display-mode playback list
 - Measure warm-up N; headless read-only timing for decode's share; MOG2 on grayscale
