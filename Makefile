@@ -1,6 +1,6 @@
-build/main.exe: src/main.cpp
+build/main.exe: src/main.cpp src/args.cpp src/args.hpp
 	@mkdir -p build
-	g++ -std=c++17 -g $< -o $@ -IC:/msys64/ucrt64/include/opencv5 -lopencv_videoio -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgproc
+	g++ -std=c++17 -g src/main.cpp src/args.cpp -o $@ -IC:/msys64/ucrt64/include/opencv5 -lopencv_videoio -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgproc
 
 
 build/hello_opencv.exe: scratch/hello_opencv.cpp
