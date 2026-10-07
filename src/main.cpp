@@ -27,7 +27,7 @@ namespace {
         mog2->apply(imgScaled, mask);
         
     }
-    const int BLOB_AREA_THRESHOLD = 100;
+    const int blobAreaThreshold = 100;
     struct Blob
     {
         cv::Rect bounding_box;
@@ -38,6 +38,52 @@ namespace {
     const cv::Point kNeighbors8[] = { {-1,-1}, {0,-1}, {1,-1}, 
                                         {-1,0}, {1,0},
                                         {-1,1}, {0,1}, {1,1} };
+    Blob floodFill(const cv::Mat& mask, cv::Mat& labels, const cv::Point& seed, 
+                    int labelID, std::queue<cv::Point>& queue) {
+        // Label seed
+        labels.at<int>(seed.y, seed.x) = labelID;
+        queue.push(cv::Point(seed.x, seed.y));
+
+        // Create the blob tracking stats
+        int minX = seed.x, maxX = seed.x;
+        int minY = seed.y, maxY = seed.y;
+        int count(0);
+        int sumX = 0, sumY = 0;
+
+        // Process the queue
+        while (!queue.empty())  {
+            cv::Point pt = queue.front();
+            queue.pop();
+            
+            for (const auto& neighbor : kNeighbors4) {
+                cv::Point newPt = cv::Point(neighbor.x + pt.x, neighbor.y + pt.y);
+                // Check out of bounds
+                if (newPt.x == -1 || newPt.x == mask.cols) continue;
+                if (newPt.y == -1 || newPt.y == mask.rows) continue;
+
+                if (mask.at<uchar>(newPt) != 0 && labels.at<int>(newPt) == 0) {
+                    // This label can inherit the last label
+                    labels.at<int>(newPt) = labelID;
+                    // Enqueue its neighbors
+                    queue.push(newPt);
+                }
+            }
+            // Update blob stats
+            if (pt.x < minX) minX = pt.x;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.y > maxY) maxY = pt.y;
+            sumX += pt.x;
+            sumY += pt.y;
+            count++;
+            
+        }
+        // Compute blob
+        Blob blob = {cv::Rect(minX, minY, maxX - minX + 1, maxY - minY + 1), 
+            count, 
+            cv::Point(sumX / count, sumY / count)};
+        return blob;
+    }
     void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs) {
         // Create image
         labels.create(mask.rows, mask.cols, CV_32SC1);
@@ -51,52 +97,9 @@ namespace {
         for (int y=0; y < mask.rows; y++) {
             for (int x=0; x < mask.cols; x++) {
                 if (mask.at<uchar>(y, x) != 0 && labels.at<int>(y, x) == 0) {
-                    // Label and enqueue
-                    labels.at<int>(y, x) = nextLabel;
-                    processQueue.push(cv::Point(x, y));
-
-                    // Create the blob tracking stats
-                    int minX = x, maxX = x;
-                    int minY = y, maxY = y;
-                    int count(0);
-                    int sumX = 0, sumY = 0;
-
-                    // Process the queue
-                    while (!processQueue.empty())  {
-                        cv::Point pt = processQueue.front();
-                        processQueue.pop();
-                        
-                        for (const auto& neighbor : kNeighbors4) {
-                            cv::Point newPt = cv::Point(neighbor.x + pt.x, neighbor.y + pt.y);
-                            // Check out of bounds
-                            if (newPt.x == -1 || newPt.x == mask.cols) continue;
-                            if (newPt.y == -1 || newPt.y == mask.rows) continue;
-
-                            if (mask.at<uchar>(newPt) != 0 && labels.at<int>(newPt) == 0) {
-                                // This label can inherit the last label
-                                labels.at<int>(newPt) = nextLabel;
-                                // Enqueue its neighbors
-                                processQueue.push(newPt);
-                            }
-                        }
-                        // Update blob stats
-                        if (pt.x < minX) minX = pt.x;
-                        if (pt.x > maxX) maxX = pt.x;
-                        if (pt.y < minY) minY = pt.y;
-                        if (pt.y > maxY) maxY = pt.y;
-                        sumX += pt.x;
-                        sumY += pt.y;
-                        count++;
-                        
-                    }
-                    // Queue is now empty, so increment label
+                    Blob newBlob = floodFill(mask, labels, cv::Point(x,y), nextLabel, processQueue);
+                    blobs.push_back(newBlob);
                     nextLabel++;
-                    // Compute blob
-                    Blob blob = {cv::Rect(minX, minY, maxX - minX + 1, maxY - minY + 1), 
-                        count, 
-                        cv::Point(sumX / count, sumY / count)};
-                    // Save blob
-                    blobs.push_back(blob);
                 }
             }
         }
@@ -107,7 +110,7 @@ namespace {
     constexpr int refMargin = 20;
     constexpr int counterFont = cv::FONT_HERSHEY_SIMPLEX;
     constexpr const char* counterSample = "Frame: 0000";  // clips are <= 2255 frames
-    void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count, std::vector<Blob> blobs,
+    void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count, const std::vector<Blob>& blobs,
                 cv::Mat& mask3c, cv::Mat& frame) {
         // Convert mask into 3 channel
         cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2BGR, 3);
@@ -123,9 +126,8 @@ namespace {
 
         // Draw the labeled boxes
         for (const Blob& blob : blobs) {
-            if (blob.area < BLOB_AREA_THRESHOLD) continue;
+            if (blob.area < blobAreaThreshold) continue;
             cv::rectangle(frame, blob.bounding_box, cv::Scalar(225, 0, 0), 2);
-            // cv::rectangle(frame, blob.bounding_box, cv::Scalar(225, 0, 0), 2);
         }
 
         // Measure a fixed-width sample so the text doesn't shift left as digits are added
