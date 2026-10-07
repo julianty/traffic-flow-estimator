@@ -221,3 +221,29 @@ Frame counter scaled with frame size
 - Gotcha: `getTextSize` result was first discarded (call with no assignment), so the hardcoded 220 was still used
 - IntelliSense flags `getTextSize` ("no instance of overloaded function matches"): false positive. OpenCV 5 added a second overload (`Rect getTextSize(Size imgsize, const String& text, Point org, ...)`, `imgproc.hpp` ~4402). g++ compiles cleanly with `-Wall -Wextra`
 - Display checked at 0.5 and 1.0: counter bottom-right of the mask half, same relative size
+
+### 10-7-26 (Week 3: new i5 clips + stabilization check):
+
+Added 4 clips: `i5-{incoming,outgoing}-1080p-{30,60}fps-stab.mp4` (1080p, overpass view of I-5, 36-37 s; 30/60 fps are the same footage)
+- Same stability test as 9-30 (ORB + RANSAC similarity fit vs. first frame, every 2 s, max corner shift in full-res px). Re-ran on `auckland-hwy` first as a sanity check: 1.8 px (meta.json says 1), so the method reproduces
+- Raw clips are **not** usable: incoming 58.7 px, outgoing 107 px (60 fps versions same). Continuous wander (5-40 px between 2 s samples), not a one-time settle, so "stab" in the file name is not enough. MOG2 would flag lane lines/median as foreground and a fixed count line would not stay on the lanes
+- Visually confirmed (median/lane lines in different places at start vs. end)
+
+Software stabilization in DaVinci Resolve (Color page Tracker -> Stabilizer; masked to the static road/median, Camera Lock on, Zoom off; H.264 1080p30 export), re-measured
+- `i5-incoming-1080p-30fps-softwarestab`: **1.3 px**, 0.03 deg, 1095 frames/36.5 s (same as source). Pass (target <= 2-3 px). Worst outer 8 px band 2.7% near-black (small crop gap: keep the count line away from the edges)
+  - MOG2 (1080p -> 0.5 scale, defaults, shadows on, 255 only, open 3x3 + close 7x7, min area 150): mean fg 5.9%, 2.9 blobs/frame (max 8), one solid blob per car. Mask is clean on lane lines/median
+  - Problem: a car's dark shadow on the shoulder joins its blob (wedge attached to the car), which will skew bounding boxes/centroids. Look at MOG2 shadow handling / morphology
+  - Traffic is sparse (1-3 cars in view): easy for BFS but little overlap for NMS, and a small ground-truth count means one miss is a big % error
+- `i5-outgoing-1080p-30fps-softwarestab`: **7.7 px**, creeping up from 2 px (inlier ratio only 4-14%, so low confidence; trend probably real). Marginal
+  - Stabilizer left black bars at top/bottom that change size per frame (Zoom was off). Re-export with Zoom ~5-10% if this clip is wanted
+  - MOG2 blobs fragmented/hollow (12.9 blobs/frame, max 24), shadows attached. Denser traffic with side-by-side cars: good stress case, but weaker than `auckland-hwy` (1.8 px, 60 s, stable)
+
+Decisions
+- Week 3 BFS development on `i5-incoming` (softwarestab): clean masks so any bug is in the labeling, not the input
+- Main for benchmark / later stress (NMS, merging, Week 4+): stays `auckland-hwy`. `i5-outgoing` optional extra after re-stabilizing
+- 60 fps incoming: skipped for now. Unstabilized (58.5 px), would need redoing in Resolve. MOG2 `history` is in frames (500 = ~17 s @30, ~8 s @60), so parameters don't transfer between frame rates. 60 fps leaves 16.7 ms/frame vs. ~13 ms headless at 1080p. Optional Week 8-9 experiment (same pipeline @30 vs. @60 with frame-rate-scaled params), or if speed estimation is attempted
+
+Open
+- Update `source-videos/meta.json` with the i5 clips (stability numbers above, roles: incoming = BFS dev, outgoing = unused/optional); `auckland-hwy` unchanged as main
+- Tune MOG2 shadow threshold / morphology so car shadows don't join blobs
+- Delete `scratch/_frames_compare.jpg` (leftover from the analysis)
