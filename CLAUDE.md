@@ -30,12 +30,19 @@
 
 ## Tech stack
 - C++17, g++, VS Code (current setup — works fine, no need to change)
-- OpenCV 5.0.0 — installed via MSYS2 UCRT64 (`pacman -S mingw-w64-ucrt-x86_64-opencv`), verified Sep 30 with `scratch/hello_opencv.cpp`
+- **Two machines:** Windows (MSYS2 UCRT64) and macOS (Apple Silicon MacBook Air, Homebrew), set up Oct 9. Full install steps for both are in `README.md` → Setup.
+  - **Pending:** branch `cross-platform-setup` (commit `7a65472`, pushed) makes the Makefile portable + adds README setup. Verified on macOS only. Before merging to `main`: pull on Windows, `make`, one headless run. Merge expected ~Oct 11–12.
+- OpenCV 5.0.0 on **macOS** — `brew install openssl@4` first, then `brew install opencv` (Homebrew 7.0.9 self-lock bug on `openssl@3` otherwise; details in README). pkg-config name `opencv5`, headers `/opt/homebrew/opt/opencv/include/opencv5`, libs `/opt/homebrew/opt/opencv/lib` (Apple's linker doesn't search it by default, hence `--libs-only-L`). HighGUI works with no extra setup. `g++` is Apple clang 21.
+  - Build shortcut on macOS is **Cmd+Shift+B**; `.vscode/tasks.json` runs plain `make` with `/opt/homebrew/bin` prepended to `PATH`.
+  - Run with `build/main.exe ...` directly; no PATH/DLL setup needed.
+  - Homebrew installs fail inside Claude Code's Bash sandbox (lock files), so they need to run unsandboxed or by Julian.
+  - macOS headless timings (Oct 9, with BFS step, `-g` build): 47.7 ms/frame @1.0, 13.6 ms @0.5. Not comparable to the pre-BFS Windows numbers below.
+- OpenCV 5.0.0 on **Windows** — installed via MSYS2 UCRT64 (`pacman -S mingw-w64-ucrt-x86_64-opencv`), verified Sep 30 with `scratch/hello_opencv.cpp`
   - pkg-config name is `opencv5`; headers in `C:/msys64/ucrt64/include/opencv5`
   - HighGUI (`imshow`) needs Qt6 at runtime: `mingw-w64-ucrt-x86_64-qt6-5compat` (pacman lists it as optional, but it isn't for us)
   - `C:\msys64\ucrt64\bin` is on Windows PATH so exes run outside the UCRT64 terminal
 - ffmpeg — installed (came in as an OpenCV dependency)
-- Build: `Makefile` at repo root (tracked), one rule per exe, output in `build/`. Default target `build/main.exe` links `core`, `highgui`, `videoio`, `video` (MOG2), `imgproc` (`resize`, `cvtColor`, `putText`) explicitly. `scratch/hello_opencv` still links everything via `pkg-config --libs opencv5`.
+- Build: `Makefile` at repo root (tracked), one rule per exe, output in `build/`. Default target `build/main.exe` links `core`, `highgui`, `videoio`, `video` (MOG2), `imgproc` (`resize`, `cvtColor`, `putText`) explicitly, with include/lib paths from `$(shell pkg-config --cflags opencv5)` and `--libs-only-L opencv5` (no hardcoded paths, so it works on both machines). `scratch/hello_opencv` still links everything via `pkg-config --libs opencv5`.
   - Ctrl+Shift+B (`.vscode/tasks.json`, gitignored) runs `make` through MSYS2 bash with `MSYSTEM=UCRT64`; setup details in `log.md` (9-30-26).
   - Julian keeps the Makefile deliberately simple: a single rule compiles every `.cpp` in one `g++` call (no `.o` files). The prerequisites list every `.cpp` **and every header** by hand (manual stand-in for `-MMD`), and the `g++` line names each `.cpp` explicitly (`$<` would drop files, `$^` would pass headers). Add new files to both lists (e.g. `ccl.cpp`/`ccl.hpp` in Week 3). Move to per-file `.o` rules / pattern rule + `-MMD -MP` only if rebuilds get slow or a forgotten header causes a stale build.
 - Running exes from Git Bash needs `/c/msys64/ucrt64/bin` on `PATH` (otherwise they exit silently, missing DLLs).
