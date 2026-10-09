@@ -31,7 +31,7 @@
 ## Tech stack
 - C++17, g++, VS Code (current setup — works fine, no need to change)
 - **Two machines:** Windows (MSYS2 UCRT64) and macOS (Apple Silicon MacBook Air, Homebrew), set up Oct 9. Full install steps for both are in `README.md` → Setup.
-  - **Pending:** branch `cross-platform-setup` (commit `7a65472`, pushed) makes the Makefile portable + adds README setup. Verified on macOS only. Before merging to `main`: pull on Windows, `make`, one headless run. Merge expected ~Oct 11–12.
+  - **Pending:** portable Makefile + README setup (from branch `cross-platform-setup`) fast-forwarded into local `main` Oct 9; verified on macOS only. **`main` not yet pushed.** Next on Windows (~Oct 11–12): pull, `make`, one headless run, fix if needed, then push `main` and delete the `cross-platform-setup` branch.
 - OpenCV 5.0.0 on **macOS** — `brew install openssl@4` first, then `brew install opencv` (Homebrew 7.0.9 self-lock bug on `openssl@3` otherwise; details in README). pkg-config name `opencv5`, headers `/opt/homebrew/opt/opencv/include/opencv5`, libs `/opt/homebrew/opt/opencv/lib` (Apple's linker doesn't search it by default, hence `--libs-only-L`). HighGUI works with no extra setup. `g++` is Apple clang 21.
   - Build shortcut on macOS is **Cmd+Shift+B**; `.vscode/tasks.json` runs plain `make` with `/opt/homebrew/bin` prepended to `PATH`.
   - Run with `build/main.exe ...` directly; no PATH/DLL setup needed.
