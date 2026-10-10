@@ -384,3 +384,27 @@ Open
 - `CLAUDE.md` update commit (`08753de`) and the log/report commits not pushed yet
 - Delete the merged remote branches: `cross-platform-setup`, `morphology`, `week3-docs`
 - `scratch/ccl_check.cpp` still has its own copy of `Blob`/`floodFill`/`label`; point it at `ccl.hpp`
+
+### 10-10-26 (Week 3: `--kneighbors` flag for 4 vs. 8 connectivity):
+
+Added `--kneighbors <4|8>` (default 4). Commits `b90e5fd` (flag), `906c207` (default 4), pushed. Also removed the display-only area filter from `render` (blobs are no longer filtered anywhere yet).
+
+- `Neighbors { Four = 4, Eight = 8 }` is an enum class in `ccl.hpp`; `args.hpp` includes `ccl.hpp` for `InputFlags::kneighbors`. `label()` takes a `Neighbors`; `floodFill` picks `kNeighbors4` or `kNeighbors8` and indexes `offsets[i]` for `i < count`
+- `args.cpp`: `std::stoi` in a `try` that wraps only the conversion, then the `consumed` check and the 4-or-8 check outside it, then the enum assignment. A throw inside the `try` would be caught by the `catch (const std::exception&)` (`runtime_error` derives from it)
+- Smoke test, headless `auckland-hwy` @0.5, 1500 frames: k=4 18.2 s, k=8 23.7 s (noisy: the 4-connected run was 15.9 s earlier the same day); `--kneighbors 7` rejected with the usage text
+- Default 4 because the OpenCV comparison (0 mismatches) was done at 4, and 8 can only merge more: diagonal-touching cars become one blob, which is the dense-traffic problem
+
+What I learned
+- An array name decays to a pointer to its first element when assigned to a pointer; the length is lost, so the loop needs a pointer plus a count. `&arr` is a different type (pointer to the whole array, `T(*)[N]`) with the same address
+- `offsets++` inside the loop moves the pointer permanently; index with `offsets[i]` instead
+- `std::to_integer` is for `std::byte`, not string parsing
+- An enum class never converts implicitly to or from `int`
+- Git Bash hides g++ errors in this setup (exit 1, no output); compile from PowerShell to see them
+- Ignoring a directory in `.gitignore` does not untrack files already committed (`assets/` Week 2 screenshots)
+
+Open
+- Not run yet: `ccl_check` at 8 (OpenCV takes 4 or 8); point it at `ccl.hpp` first
+- Compare blob counts at 4 vs. 8 on the dense clip
+- Dense `auckland-hwy` shows real overlap/merged cars (screenshots in `assets/`, now gitignored). NMS dedupes boxes but won't split one merged blob; try a smaller close kernel and a split step
+- Row-pointer timing dropped from the plan (BFS is not the bottleneck)
+- CLAUDE.md still describes `label` as 4-connectivity without the parameter

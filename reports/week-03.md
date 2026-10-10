@@ -5,6 +5,7 @@
 ## Done this week
 
 - **BFS connected-components labeling (my own implementation):** a flood fill over the foreground mask, 4-connected, returns a bounding box, area and centroid for each blob. Boxes are drawn on the frame.
+- **4 vs. 8 connectivity flag:** `--kneighbors <4|8>` (default 4) chooses whether diagonal pixels join a blob. 4 is the default because it is what was checked against OpenCV and because 8 can only merge more cars. Not yet compared on blob counts.
 - **Noise cleanup before labeling:** the mask now goes through a morphological open (3x3, removes specks) then close (7x7, fills holes and gaps in cars) before labeling. The small noisy blobs are gone on the main clip. It costs almost nothing: 12.8 ms/frame at half resolution, unchanged from before.
 - **New test footage:** four I-5 overpass clips. The raw clips drifted by 59–107 px, too much for background subtraction, so I stabilized them in software. `i5-incoming` came out at 1.3 px and is now the development clip for labeling (sparse traffic, clean masks). `i5-outgoing` is marginal (7.7 px) and unused for now.
 - **Housekeeping:** clip metadata updated for the new footage; macOS editor setup fixed.
@@ -19,8 +20,10 @@
 
 ## Still open from Week 3 (to finish or carry over)
 
+- Run the OpenCV comparison at 8-connectivity and compare 4 vs. 8 blob counts on the dense clip.
+- **Merged cars are a confirmed problem** on the dense Auckland clip (noted Oct 10). Non-max suppression won't split one merged blob, so Week 4 needs a smaller close kernel and/or a split step as well.
 - Point the comparison test at the shared `ccl.hpp` instead of its own copy of the labeling code, so the two can't drift apart. (The code split itself is done and merged.)
-- Move the minimum-blob-size filter out of the drawing code so later stages don't see tiny blobs.
+- The minimum-blob-size filter was removed from the drawing code but not re-added anywhere, so no stage filters tiny blobs yet.
 - Check that the close step doesn't merge two nearby cars into one box.
 
 ## Next week (Week 4, Oct 13–19)
