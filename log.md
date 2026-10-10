@@ -371,7 +371,7 @@ Steps
 Verification (Windows, `-g` build)
 - `make` clean, no warnings
 - Headless `auckland-hwy` (`16516296_1920_1080_25fps.mp4`), `--scale 0.5`: 15.9 s / 1500 frames = ~10.6 ms/frame (94 fps). Windows numbers: 10.9 ms/frame before morphology (10-7), so morphology adds little here too. Not comparable to the macOS 12.8 ms (different machine)
-- Not recorded: a visual check of the cleaned mask in the interactive window. Worth doing to confirm `render` shows `filterMask` and the small noisy blobs are gone
+- Visual check in the interactive window: the morphology pass removes the small noisy blobs from the mask, so `render` is showing `filterMask` and `label` is labeling the cleaned mask
 
 What I learned
 - `origin/week3-docs` is a remote-tracking reference: a local bookmark of where the branch was at the last `git fetch`. `git merge` with it works offline and does not contact the remote
@@ -381,7 +381,6 @@ What I learned
 
 Open
 - This entry supersedes two notes in the 10-9-26 macOS entries: "`ccl.hpp`/`ccl.cpp` split exists on the Windows PC only" and "Local `main` is 3 commits ahead". Both are resolved by this merge
-- `CLAUDE.md` update commit (`08753de`) not pushed yet
+- `CLAUDE.md` update commit (`08753de`) and the log/report commits not pushed yet
 - Delete the merged remote branches: `cross-platform-setup`, `morphology`, `week3-docs`
 - `scratch/ccl_check.cpp` still has its own copy of `Blob`/`floodFill`/`label`; point it at `ccl.hpp`
-- Interactive visual check of the merged pipeline (see above)
