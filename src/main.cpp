@@ -98,7 +98,8 @@ namespace {
         }
         return KeyAction::Continue;
     }
-    
+    constexpr int openKernelSize = 3;
+    constexpr int closeKernelSize = 7;
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -150,6 +151,13 @@ int main(int argc, char* argv[]) {
     // Initialize frame
     cv::Mat frame;
 
+    // Instantiate structures for spatial filtering
+    cv::Mat openKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(openKernelSize,openKernelSize));
+    cv::Mat closeKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(closeKernelSize,closeKernelSize));
+
+    // Processing Mask
+    cv::Mat filterMask; 
+
     // Initialize Labels
     cv::Mat labels;
     std::vector<Blob> blobs;
@@ -162,13 +170,17 @@ int main(int argc, char* argv[]) {
         // Run binary threshold on mask
         cv::threshold(mask, binMask, 200, 255, cv::THRESH_BINARY);
 
-        // Run connected components labeling step
-        label(binMask, labels, blobs);
+        // Run spatial filtering pass - Morphology
+        cv::morphologyEx(binMask, filterMask, cv::MORPH_OPEN, openKernel);
+        cv::morphologyEx(filterMask, filterMask, cv::MORPH_CLOSE, closeKernel);
+
+        // Save blobs in mask
+        label(filterMask, labels, blobs);
         frame_count++;
 
         if (!flags.headless) {
             // Draw next frame
-            render(imgScaled, mask, frame_count, blobs, mask3c, frame);
+            render(imgScaled, filterMask, frame_count, blobs, mask3c, frame);
 
             // Handle any inputs
             KeyAction action = handleInput();
