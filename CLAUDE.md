@@ -43,6 +43,7 @@
 ## Code layout
 - `src/main.cpp`: capture, MOG2 loop, display, key controls.
 - `src/args.hpp` / `src/args.cpp`: hand-rolled CLI parsing (Julian chose this over CLI11/cxxopts/`cv::CommandLineParser`). `InputFlags` struct (`video_path`, `headless`, `scale`, default 1.0), `argParse` throws `std::runtime_error` on any bad input (one catch in `main` prints the error + `printUsage`, returns 1). `getNextArg` is file-private (anonymous namespace).
+- `src/ccl.hpp` / `src/ccl.cpp`: BFS connected-components labeling. Public: `Blob {bounding_box, area, centroid}` and `label(mask, labels, blobs)` (binary `CV_8UC1` in, `CV_32SC1` labels out, 0 = background, blobs numbered from 1 in scan order, 4-connectivity). `floodFill` and the neighbor tables are file-private. `#ifndef NDEBUG` check at the end of `label()`: blob areas sum to `countNonZero(mask)`. `main` thresholds the MOG2 mask at 200 (drops shadows = 127) before calling `label`; `render` draws boxes with `area >= blobAreaThreshold` (display-only filter).
 - Usage: `main.exe --video_path <file> [--headless] [--scale <s>]`, `0 < s <= 1`. Headless skips all display work and `waitKey` (no pause/quit; Ctrl+C only).
 - Display at the default scale 1.0 is a 3840x1080 window (too wide); use `--scale 0.5` for interactive runs.
 
@@ -66,7 +67,7 @@
 |---|---|---|
 | 1 | Sep 22–28 | Env setup: install/verify OpenCV, confirm g++ links it ✅ (Sep 30); pull footage ✅ (Sep 30, 6 Pexels clips, see `meta.json`); git repo + this file ✅ |
 | 2 | Sep 29–Oct 5 | Makefile + video playback/timing on `auckland-hwy` ✅ (Sep 30). MOG2 end-to-end + mask shown next to frame ✅ (Oct 1). Timing: headless pipeline is 13.2 ms/frame at 1080p, 4.5 ms at 540p; display was ~80% of interactive cost ✅. Pause/quit controls + frame counter ✅. Refactor (Oct 3–4): CLI flags `--video_path/--headless/--scale` in `src/args.*` ✅, display behind `!headless` ✅ (headless timings unchanged: 13.1 ms @1.0, 4.5 ms @0.5). Left: Step 2 of refactor (scale-aware `putText` position/font, skip `resize` when scale = 1.0), Step 3 (extract process/render/input functions; pass output Mats by non-const ref; key-code constants), measure warm-up frames. Pause/quit re-tested after refactor ✅; log ✅ + weekly report ✅ (`reports/week-02.md`, Oct 4) |
-| 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob |
+| 3 | Oct 6–12 | Implement BFS connected-components labeling → bounding boxes per blob. BFS labeling + blob boxes drawn + area-sum debug check ✅ (Oct 7, `src/ccl.*`, ~6 ms/frame at 540p). Left: compare vs. `cv::connectedComponentsWithStats`, row-pointer timing, 4 vs. 8 connectivity, weekly report |
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology) |
 | 5 | Oct 20–26 | Naive centroid tracking + line-crossing counting → first end-to-end counts |
 | 6 | Oct 27–Nov 2 | Manual ground-truth count on the same clip; measure accuracy; iterate on misses/double-counts/occlusion |

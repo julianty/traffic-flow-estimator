@@ -247,3 +247,26 @@ Open
 - Update `source-videos/meta.json` with the i5 clips (stability numbers above, roles: incoming = BFS dev, outgoing = unused/optional); `auckland-hwy` unchanged as main
 - Tune MOG2 shadow threshold / morphology so car shadows don't join blobs
 - Delete `scratch/_frames_compare.jpg` (leftover from the analysis)
+
+### 10-7-26 (Week 3: BFS connected-components labeling, first working version):
+
+`src/ccl.{hpp,cpp}`: `label(mask, labels, blobs)` + private `floodFill` (BFS, `std::queue<cv::Point>`), 4-connectivity, `Blob {bounding_box, area, centroid}`
+- Binary threshold (`cv::threshold(mask, binMask, 200, 255, THRESH_BINARY)`) sits in `main` between `process` and `label`. Shadows (127) drop out; `render` still shows the raw `mask`
+- `labels` is `CV_32SC1`, reused across frames (`create` + `setTo(0)` every call: `create` doesn't zero). 0 = background, blobs numbered from 1 in scan order. Separate Mat from the frame; `CV_32S` chosen over `CV_8U` (overflow past 255 labels on raw noise) and `CV_16U` (fine, but 32S matches OpenCV's `ltype`). Revisit 16U / no label image only if timing needs it
+- Rule that fixed the main bug: **claim at enqueue, check before enqueue.** A neighbor is bounds-checked, tested (foreground and label == 0), labeled, then pushed. Nothing is re-tested at pop. Testing `labels == 0` on the popped pixel can never pass (it was labeled when pushed), so the BFS never expanded
+- Stats (min/max x/y, count, sumX/sumY) are plain locals inside `floodFill`, the `Blob` is built once after the queue empties. Box width/height need `+1` (max is inclusive). `int minX, maxX = x;` only initializes `maxX` (the comma doesn't share the initializer): all boxes started at (0,0)
+- Gotchas hit: `at<T>(row, col)` is `(y, x)` but `cv::Point` is `(x, y)` (swapped once on the seed write, an out-of-bounds write on non-square images; `at<T>(Point)` does the swap). `at<uchar>` on a `CV_32S` Mat reads the wrong bytes. `const cv::Point[]` not `constexpr` (`Point_`'s ctor isn't constexpr). `std::queue::pop()` returns void (`front()` then `pop()`). `{1 -1}` is `{0}`, a missing comma
+- Debug check at the end of `label()` under `#ifndef NDEBUG`: sum of blob areas == `cv::countNonZero(mask)`. Passed on every frame of `auckland-hwy` (1500) and `auckland-fwy` (2255) at scale 0.5. Doesn't catch merged/split blobs (that's the OpenCV comparison)
+- `render` draws blob boxes on `frame` (never on `imgScaled`), skipping `area < blobAreaThreshold` (100, display-only for now)
+- Observed on frame 217 of an Auckland clip: boxes match the white blobs exactly, but cast shadows are solid 255 (not 127), so each box covers car + shadow. Same shadow problem as the i5 note above; centroids will be biased toward the shadow too
+
+Timing (headless, `--scale 0.5`, `auckland-hwy`, `at<>` access, debug check on): 16.3 s / 1500 frames = ~10.9 ms/frame (was 4.5), so labeling is ~6 ms/frame at 540p, more than MOG2. Expect ~4x at 1080p
+
+Open
+- Compare against `cv::connectedComponentsWithStats` (connectivity 4): blob count, area, box per frame
+- Time with row pointers (`ptr<uchar>`/`ptr<int>`) instead of `at<>`, and with `-DNDEBUG` (cost of the check)
+- Try `setShadowThreshold` lower than 0.5 (darker pixels count as shadow) on frame 217; watch for holes in the black car. Then morphology (Week 4)
+- Connectivity 4 vs. 8: `kNeighbors8` exists but `floodFill` is hard-wired to 4; make it a parameter, check on real masks
+- `sumX`/`sumY` to `long long`; bounds check as `< 0 || >= cols`
+- Week 4: min-size filter belongs in the pipeline, not just `render`
+- Weekly report for Week 3 (Sunday Oct 11), `reports/week-03.md`
