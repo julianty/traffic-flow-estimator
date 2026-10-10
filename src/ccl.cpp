@@ -3,7 +3,7 @@
 #include <vector>
 #include <queue>
 #include <cassert>
-
+#include <stdexcept>
 namespace {
     const cv::Point kNeighbors4[] = { {0,-1}, {-1,0}, {1,0}, {0,1} };
     const cv::Point kNeighbors8[] = { {-1,-1}, {0,-1}, {1,-1}, 
@@ -11,7 +11,10 @@ namespace {
                                         {-1,1}, {0,1}, {1,1} };
 
     Blob floodFill(const cv::Mat& mask, cv::Mat& labels, const cv::Point& seed, 
-                    int labelID, std::queue<cv::Point>& queue) {
+                    int labelID, std::queue<cv::Point>& queue, int kNeighbors) {
+        // Set kernel
+        const cv::Point* offsets = kNeighbors == 4 ? kNeighbors4 : kNeighbors8;
+
         // Label seed
         labels.at<int>(seed.y, seed.x) = labelID;
         queue.push(cv::Point(seed.x, seed.y));
@@ -26,8 +29,9 @@ namespace {
         while (!queue.empty())  {
             cv::Point pt = queue.front();
             queue.pop();
-            
-            for (const auto& neighbor : kNeighbors4) {
+
+            for (int i=0; i<kNeighbors; i++) {
+                cv::Point neighbor = offsets[i];
                 cv::Point newPt = cv::Point(neighbor.x + pt.x, neighbor.y + pt.y);
                 // Check out of bounds
                 if (newPt.x == -1 || newPt.x == mask.cols) continue;
@@ -57,7 +61,7 @@ namespace {
         return blob;
     }
 } // namespace
-void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs) {
+void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs, Neighbors kNeighbors) {
     // Create image
     labels.create(mask.rows, mask.cols, CV_32SC1);
     // Ensure zeroing across iterations
@@ -70,7 +74,7 @@ void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs) {
     for (int y=0; y < mask.rows; y++) {
         for (int x=0; x < mask.cols; x++) {
             if (mask.at<uchar>(y, x) != 0 && labels.at<int>(y, x) == 0) {
-                Blob newBlob = floodFill(mask, labels, cv::Point(x,y), nextLabel, processQueue);
+                Blob newBlob = floodFill(mask, labels, cv::Point(x,y), nextLabel, processQueue, static_cast<int>(kNeighbors));
                 blobs.push_back(newBlob);
                 nextLabel++;
             }

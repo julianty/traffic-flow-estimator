@@ -51,7 +51,6 @@ namespace {
 
         // Draw the labeled boxes
         for (const Blob& blob : blobs) {
-            if (blob.area < blobAreaThreshold) continue;
             cv::rectangle(frame, blob.bounding_box, cv::Scalar(225, 0, 0), 2);
         }
 
@@ -175,7 +174,7 @@ int main(int argc, char* argv[]) {
         cv::morphologyEx(filterMask, filterMask, cv::MORPH_CLOSE, closeKernel);
 
         // Save blobs in mask
-        label(filterMask, labels, blobs);
+        label(filterMask, labels, blobs, flags.kneighbors);
         frame_count++;
 
         if (!flags.headless) {

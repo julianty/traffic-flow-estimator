@@ -9,5 +9,7 @@ struct Blob
     cv::Point centroid;
 };
 
+enum class Neighbors {Four = 4, Eight = 8};
+
 // Expects a binary CV_8UC1 mask, and fills labels as CV_32SC1
-void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs);
+void label(const cv::Mat& mask, cv::Mat& labels, std::vector<Blob>& blobs, Neighbors kNeighbors);
