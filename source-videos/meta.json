@@ -1,12 +1,12 @@
 {
   "_about": "Metadata for clips in source-videos/. Keys under 'clips' are short aliases for referring to a clip in code, notes, and the write-up. Raw .mp4 files are gitignored; this file is tracked.",
   "_fields": {
-    "role": "main | validation | backup | unused | excluded. validation = held-out clip similar to main; tune parameters on main, then check they still work here without re-tuning",
+    "role": "main | validation | backup | dev | unused | excluded. validation = held-out clip similar to main; tune parameters on main, then check they still work here without re-tuning. dev = clean-mask clip for developing/debugging an algorithm (BFS) before moving to main",
     "view": "birdseye | traffic cam | dashcam",
     "scene": "free text, e.g. highway, 4-way intersection",
     "source_url": "Pexels page the file was downloaded from (Pexels page IDs can differ from the file-name ID)",
     "width/height/fps/duration_s/codec/audio": "measured with ffprobe on the actual file (not taken from the file name)",
-    "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit); max_shift_px in full-res pixels. stable = a few px or less",
+    "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit); max_shift_px in full-res pixels. stable = a few px or less. Clips marked softwarestab were stabilized in DaVinci Resolve first; stability describes the stabilized file",
     "annotations.count_line": "line-crossing geometry, e.g. [[x1,y1],[x2,y2]] in full-res pixels; null until designed",
     "annotations.mask_regions": "polygons to ignore (overlays, trees); empty until needed",
     "annotations.ground_truth": "manual vehicle count for benchmarking; null until counted",
@@ -23,7 +23,8 @@
   "roles": {
     "main": "auckland-hwy",
     "validation": "auckland-fwy",
-    "backup": "urban-road"
+    "backup": "urban-road",
+    "dev": "i5-incoming"
   },
   "clips": {
     "auckland-hwy": {
@@ -196,6 +197,66 @@
         "max_rotation_deg": null
       },
       "notes": "Shot from a moving vehicle; background subtraction won't work.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "i5-incoming": {
+      "file": "i5-incoming-1080p-30fps-softwarestab.mp4",
+      "role": "dev",
+      "source_url": null,
+      "author": null,
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.0,
+      "duration_s": 36.5,
+      "codec": null,
+      "audio": null,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 1.3,
+        "max_rotation_deg": 0.03
+      },
+      "notes": "Overpass view of I-5, software-stabilized in DaVinci Resolve (raw clip wandered 58.7 px; 60 fps version is unstabilized, skipped). 1095 frames. Sparse traffic (1-3 cars in view), clean MOG2 masks: used for BFS development. A car's shadow on the shoulder joins its blob. Worst outer 8 px band is 2.7% near-black (crop gap): keep the count line away from the edges. Fields not measured with ffprobe: source_url, codec, audio.",
+      "annotations": {
+        "count_line": null,
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "i5-outgoing": {
+      "file": "i5-outgoing-1080p-30fps-softwarestab.mp4",
+      "role": "unused",
+      "source_url": null,
+      "author": null,
+      "view": "traffic cam",
+      "scene": "highway",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.0,
+      "duration_s": 36.5,
+      "codec": null,
+      "audio": null,
+      "stability": {
+        "verdict": "marginal",
+        "max_shift_px": 7.7,
+        "max_rotation_deg": null
+      },
+      "notes": "Opposite direction of the same I-5 footage, software-stabilized but creeps from 2 px to 7.7 px (low inlier ratio, 4-14%). Black bars at top/bottom change size per frame (Zoom was off); re-export with Zoom ~5-10% if wanted. Denser side-by-side traffic: good stress case but MOG2 blobs are fragmented/hollow (12.9 blobs/frame). Raw clip wandered 107 px. Duration approximate (36-37 s). Fields not measured with ffprobe: source_url, codec, audio, rotation.",
       "annotations": {
         "count_line": null,
         "mask_regions": [],

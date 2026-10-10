@@ -247,3 +247,28 @@ Open
 - Update `source-videos/meta.json` with the i5 clips (stability numbers above, roles: incoming = BFS dev, outgoing = unused/optional); `auckland-hwy` unchanged as main
 - Tune MOG2 shadow threshold / morphology so car shadows don't join blobs
 - Delete `scratch/_frames_compare.jpg` (leftover from the analysis)
+
+### 10-9-26 (Week 3: morphology before labeling, macOS):
+
+Morphology on the binary mask (branch `morphology`, pushed; not merged)
+- Pipeline now: `threshold` (>200, drops the gray shadow value) -> `morphologyEx` open 3x3 -> close 7x7 -> `label`. Kernels from `getStructuringElement(MORPH_RECT, ...)`, built once before the loop; sizes are named constants (`openKernelSize`, `closeKernelSize`)
+- Kernel sizes are in pixels at the processing scale: 7x7 at `--scale 0.5` covers 14 px at 1080p. Changing the scale means retuning
+- Open = erode then dilate (removes white specks narrower than the kernel, survivors regrow to ~original size). Close = dilate then erode (fills holes/gaps narrower than the kernel). Neither is the inverse of the other: the first step destroys information the second can't recover. Open first, otherwise close bridges specks into real blobs
+- Morphology is the non-linear branch of spatial filtering (min/max over the kernel shape); convolution (blur, Sobel) is the linear branch (weighted sum)
+- Gotcha: first version called `label(binMask, ...)`, so the cleaned `filterMask` was computed and discarded. Looked fine, boxes identical to before. Now `label(filterMask, ...)` and `render` shows `filterMask`
+- Chaining the close in place on `filterMask` is fine; `dst` must be a non-const `Mat` (same trap as the `const Mat&` output in 10-4)
+- Visual check on `auckland-hwy`: small noisy blobs gone
+- Headless on `auckland-hwy`, 1500 frames, `-g` build: 19.1 s @0.5 (12.8 ms/frame, 78 fps), 68.8 s @1.0 (45.8 ms/frame, 21.8 fps). Matches the 10-9 numbers (13.6 / 47.7 ms), so morphology is nearly free. @1.0 is over the 40 ms real-time budget at 25 fps: BFS is the likely cost, revisit with the scale decision in Week 4
+
+Setup
+- macOS IntelliSense: red squiggles under `opencv2` were editor-only (`make` compiled fine). Fixed with a gitignored `.vscode/c_cpp_properties.json` (include `/opt/homebrew/opt/opencv/include/opencv5`, c++17, `macos-clang-arm64`)
+- `source-videos/meta.json`: added `i5-incoming` (new role `dev`, 1.3 px) and `i5-outgoing` (unused, 7.7 px) from the 10-7 numbers. `source_url`/`author`/`codec`/`audio` left null: the i5 files are not on the Mac, run ffprobe on Windows to fill them
+- `scratch/_frames_compare.jpg` doesn't exist on this machine; check on Windows
+
+Open
+- `ccl.hpp`/`ccl.cpp` split exists on the Windows PC only (not pushed). Merge `morphology` with it on Windows: expect small conflicts in `main.cpp` and the Makefile prerequisite/`g++` lists
+- Blob area filter (100) is only applied in `render`, so later stages (NMS, tracking) would see tiny blobs. Move it into `label`/a cleanup step, and reconcile with the 150 used in the 10-7 analysis
+- Check box merging on two close cars (does the 7x7 close join them?) on `auckland-hwy`
+- `connectedComponentsWithStats` (4-connectivity) check against `label`: blob count, areas, boxes should match exactly, compared before the area filter
+- `kNeighbors8` unused: delete it, or make connectivity a parameter and compare
+- Local `main` is 3 commits ahead of `origin/main` (unpushed); `cross-platform-setup` branch still to delete after the Windows check
