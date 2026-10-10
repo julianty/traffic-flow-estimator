@@ -19,3 +19,6 @@ data/raw/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Screenshots
+assets/
