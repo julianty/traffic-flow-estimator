@@ -71,5 +71,5 @@ void printUsage(const char* prog) {
         << "  --video_path <file>  video to process (required)\n"
         << "  --headless           no window or key controls; for benchmarks\n"
         << "  --scale <s>          resize factor before MOG2, 0 < s <= 1 (default 1.0)\n"
-        << "  --kneighbors <4|8>   pixel connectivity for blob labeling (default 8)\n";
+        << "  --kneighbors <4|8>   pixel connectivity for blob labeling (default 4)\n";
 }

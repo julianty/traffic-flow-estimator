@@ -6,7 +6,7 @@ struct InputFlags {
     std::string video_path = "";
     bool headless = false;
     double scale = 1.0;
-    Neighbors kneighbors = Neighbors::Eight;
+    Neighbors kneighbors = Neighbors::Four;
 };
 
 InputFlags argParse(int argc, char* argv[]);
