@@ -1,6 +1,6 @@
 # Week 3 progress report (Oct 6 – Oct 12, 2026)
 
-**Status: mostly on track, draft written Fri Oct 9.** Week 3's goal was BFS connected-components labeling that turns the foreground mask into one bounding box per blob. The labeling works and is in the pipeline; the check against OpenCV and some cleanup are still open. Update this before sending on Sunday.
+**Status: mostly on track, draft written Fri Oct 9.** Week 3's goal was BFS connected-components labeling that turns the foreground mask into one bounding box per blob. The labeling works, is in the pipeline, and matches OpenCV's own function exactly; some cleanup is still open. Update this before sending on Sunday.
 
 ## Done this week
 
@@ -11,13 +11,13 @@
 
 ## Key findings
 
+- **My labeling matches OpenCV exactly.** A test program runs my BFS and OpenCV's `connectedComponentsWithStats` on the same mask every frame and compares blob count, bounding box, area and centroid. Zero mismatches over 3,755 frames on both Auckland clips (half and full resolution). Not yet covered: blobs touching the frame edge, and the i5 clip.
 - Morphology order matters: open first, then close. They are not inverses of each other, since each loses information that the other can't restore.
 - A car's shadow on the shoulder joins its blob in the i5 clip, which will skew boxes and centroids. This needs tuning in Week 4.
 - Full-resolution processing runs at about 46 ms/frame on the Mac, over the 40 ms real-time budget at 25 fps. Half resolution is 12.8 ms. This feeds the scale decision in Week 4.
 
 ## Still open from Week 3 (to finish or carry over)
 
-- Check my labeling against OpenCV's own connected-components function; blob counts and boxes should match exactly.
 - Split the labeling code into its own source files (done on the Windows PC, not yet merged with this week's changes).
 - Move the minimum-blob-size filter out of the drawing code so later stages don't see tiny blobs.
 - Check that the close step doesn't merge two nearby cars into one box.

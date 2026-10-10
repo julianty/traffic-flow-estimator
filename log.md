@@ -272,3 +272,28 @@ Open
 - `connectedComponentsWithStats` (4-connectivity) check against `label`: blob count, areas, boxes should match exactly, compared before the area filter
 - `kNeighbors8` unused: delete it, or make connectivity a parameter and compare
 - Local `main` is 3 commits ahead of `origin/main` (unpushed); `cross-platform-setup` branch still to delete after the Windows check
+
+### 10-9-26 (Week 3: BFS vs. `connectedComponentsWithStats` check, macOS):
+
+Harness: `scratch/ccl_check.cpp` (Makefile target `build/ccl_check.exe`, built by name, not by plain `make`)
+- Copy of the pipeline up to `filterMask` (resize, MOG2, threshold, open 3x3, close 7x7), then runs my `label` and `cv::connectedComponentsWithStats(filterMask, ..., 4, CV_32S)` on the same mask each frame. `Blob`/`floodFill`/`label` are copied in, so they can drift from `main.cpp` (on Windows, point it at `ccl.hpp` instead)
+- OpenCV output is converted into the same `Blob` type, both vectors are sorted with one comparator (top-left `y`, then `x`), then `compareBlobs` checks size, then box / area / centroid separately, printing frame + both values on any difference. Per-frame counters printed at the end
+- Result: **0 mismatches** on `auckland-hwy` @0.5 (1500 frames) and `auckland-fwy` @1.0 (2255 frames). Boxes, areas and centroids identical on every blob
+- Run time for the full check @1.0 on `auckland-fwy`: 115.7 s (19.5 fps). Includes decode, MOG2, both labelers and the compare, so it is not a BFS cost
+
+What I learned
+- `stats` is `CV_32S`, `numLabels x 5` (`CC_STAT_LEFT/TOP/WIDTH/HEIGHT/AREA`); `centroids` is `CV_64F`, `numLabels x 2`. **Row 0 is the background**, so blobs are rows 1..`numLabels-1`
+- `CC_STAT_WIDTH/HEIGHT` are already pixel counts. My own `maxX - minX + 1` convention is inclusive-last-index; mixing the two (`minX + width` then `+ 1`) made every box one pixel too wide
+- Label numbering/order is not guaranteed to match, so compare as sorted sets, not by index
+- Centroids: mine is integer division (floor for non-negative), OpenCV's is double truncated by `cv::Point(double, double)`: also floor. They agree unless OpenCV's double lands just below an exact integer (never seen)
+- `"text" + int` is pointer arithmetic (UB), use `<<` chaining or `std::to_string`
+- `std::sort` comparator must be a strict weak ordering (`<`, never `<=`); fields fall through only when equal
+- After a size mismatch, return early: the element loop would index past the shorter vector
+
+Not covered
+- Label image equality (bijection between my labels and OpenCV's); optional
+- `i5-incoming`, and blobs touching the frame border (the Auckland masks may never produce one)
+
+Open
+- Fix the other path variable names in `ccl_check.cpp` when it moves to `ccl.hpp`; absolute macOS video paths are hardcoded
+- Remaining Week 3: move the blob area filter out of `render`; check whether the 7x7 close merges two nearby cars
