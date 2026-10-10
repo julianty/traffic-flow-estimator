@@ -408,3 +408,22 @@ Open
 - Dense `auckland-hwy` shows real overlap/merged cars (screenshots in `assets/`, now gitignored). NMS dedupes boxes but won't split one merged blob; try a smaller close kernel and a split step
 - Row-pointer timing dropped from the plan (BFS is not the bottleneck)
 - CLAUDE.md still describes `label` as 4-connectivity without the parameter
+
+### 10-10-26 (Week 3: `ccl_check` uses the shared `ccl.*`, checked at 4 and 8):
+
+`scratch/ccl_check.cpp` no longer has its own `Blob`/`floodFill`/`label`; it includes `../src/ccl.hpp` and `build/ccl_check.exe` links `src/ccl.cpp`. `KnTest` (4 or 8) drives both `label` and `connectedComponentsWithStats`.
+
+- `auckland-fwy` @1.0, open 3 / close 7, 2255 frames: kn=4 0 mismatched frames; kn=8 first run 1 mismatched frame (1908), then 0 after the sort fix
+- Frame 1908 was a test artifact: a 3x3 blob (area 9) and a 41x16 blob (area 344) share a top-left corner at (296, 333) (8-connectivity lets a small blob sit inside another's box without touching it). The sort was on (y, x) only, so `std::sort` could order the tie either way on each side. Added area, width, height as tie-breakers
+- "Total blobs" in the summary line is `blobs.size()` of the last frame, not a total over the run, so it can't be used for the 4 vs. 8 comparison
+- Run times (include OpenCV's pass, no display): kn=4 108.9 s, kn=8 128.5-137.1 s; not comparable to the headless `main` timings
+
+What I learned
+- `std::sort` is not stable and needs a strict weak ordering: when the keys tie, equal-looking elements can come out in either order, and the two vectors started in different orders
+- A relative path in a source string resolves against the working directory, not the source file's folder; `#include "../src/x.hpp"` resolves against the source file. Different rules
+- Do not put headers on the `g++` line; they belong only in the Makefile prerequisites
+- PowerShell finds GnuWin32's `make` (no `sh`, so `mkdir -p` runs in `cmd` and fails). Build from the MSYS2 UCRT64 terminal; plain Ctrl+Shift+B builds only the default target (`main.exe`)
+
+Open
+- Compare per-frame blob counts at 4 vs. 8 on `auckland-hwy` (change the print to a per-run average/max)
+- `ccl_check` video path and `scale` are still constants in the source

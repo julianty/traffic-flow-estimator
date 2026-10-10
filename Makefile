@@ -7,6 +7,6 @@ build/hello_opencv.exe: scratch/hello_opencv.cpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< -o $@ $(shell pkg-config --cflags --libs opencv5)
 
-build/ccl_check.exe: scratch/ccl_check.cpp
+build/ccl_check.exe: scratch/ccl_check.cpp src/ccl.cpp src/ccl.hpp
 	@mkdir -p build
-	g++ -std=c++17 -g $< -o $@ $(shell pkg-config --cflags --libs opencv5)
+	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)

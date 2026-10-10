@@ -5,7 +5,7 @@
 ## Done this week
 
 - **BFS connected-components labeling (my own implementation):** a flood fill over the foreground mask, 4-connected, returns a bounding box, area and centroid for each blob. Boxes are drawn on the frame.
-- **4 vs. 8 connectivity flag:** `--kneighbors <4|8>` (default 4) chooses whether diagonal pixels join a blob. 4 is the default because it is what was checked against OpenCV and because 8 can only merge more cars. Not yet compared on blob counts.
+- **4 vs. 8 connectivity flag:** `--kneighbors <4|8>` (default 4) chooses whether diagonal pixels join a blob. 4 is the default because it is what was checked against OpenCV and because 8 can only merge more cars. Matches OpenCV at both settings (see Key findings); blob counts not yet compared on the dense clip.
 - **Noise cleanup before labeling:** the mask now goes through a morphological open (3x3, removes specks) then close (7x7, fills holes and gaps in cars) before labeling. The small noisy blobs are gone on the main clip. It costs almost nothing: 12.8 ms/frame at half resolution, unchanged from before.
 - **New test footage:** four I-5 overpass clips. The raw clips drifted by 59–107 px, too much for background subtraction, so I stabilized them in software. `i5-incoming` came out at 1.3 px and is now the development clip for labeling (sparse traffic, clean masks). `i5-outgoing` is marginal (7.7 px) and unused for now.
 - **Housekeeping:** clip metadata updated for the new footage; macOS editor setup fixed.
@@ -13,16 +13,15 @@
 
 ## Key findings
 
-- **My labeling matches OpenCV exactly.** A test program runs my BFS and OpenCV's `connectedComponentsWithStats` on the same mask every frame and compares blob count, bounding box, area and centroid. Zero mismatches over 3,755 frames on both Auckland clips (half and full resolution). Not yet covered: blobs touching the frame edge, and the i5 clip.
+- **My labeling matches OpenCV exactly.** A test program runs my BFS and OpenCV's `connectedComponentsWithStats` on the same mask every frame and compares blob count, bounding box, area and centroid. Zero mismatches over 3,755 frames on both Auckland clips (half and full resolution). The comparison test now uses the shared `ccl.cpp` instead of its own copy, and I re-ran it at 8-connectivity too: 0 mismatches over 2,255 frames of `auckland-fwy` at full resolution (the one early mismatch at 8 was the test's sort tying on blobs with the same top-left corner, not a labeling difference; fixed with tie-breakers). Not yet covered: blobs touching the frame edge, and the i5 clip.
 - Morphology order matters: open first, then close. They are not inverses of each other, since each loses information that the other can't restore.
 - A car's shadow on the shoulder joins its blob in the i5 clip, which will skew boxes and centroids. This needs tuning in Week 4.
 - Full-resolution processing runs at about 46 ms/frame on the Mac, over the 40 ms real-time budget at 25 fps. Half resolution is 12.8 ms. This feeds the scale decision in Week 4.
 
 ## Still open from Week 3 (to finish or carry over)
 
-- Run the OpenCV comparison at 8-connectivity and compare 4 vs. 8 blob counts on the dense clip.
+- Compare 4 vs. 8 blob counts per frame on the dense clip (the OpenCV comparison itself is done at both).
 - **Merged cars are a confirmed problem** on the dense Auckland clip (noted Oct 10). Non-max suppression won't split one merged blob, so Week 4 needs a smaller close kernel and/or a split step as well.
-- Point the comparison test at the shared `ccl.hpp` instead of its own copy of the labeling code, so the two can't drift apart. (The code split itself is done and merged.)
 - The minimum-blob-size filter was removed from the drawing code but not re-added anywhere, so no stage filters tiny blobs yet.
 - Check that the close step doesn't merge two nearby cars into one box.
 
