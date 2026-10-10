@@ -1,6 +1,6 @@
 # Week 3 progress report (Oct 6 – Oct 12, 2026)
 
-**Status: mostly on track, draft written Fri Oct 9.** Week 3's goal was BFS connected-components labeling that turns the foreground mask into one bounding box per blob. The labeling works, is in the pipeline, and matches OpenCV's own function exactly; some cleanup is still open. Update this before sending on Sunday.
+**Status: mostly on track, draft written Fri Oct 9, updated Sat Oct 10 after merging the Mac and Windows work.** Week 3's goal was BFS connected-components labeling that turns the foreground mask into one bounding box per blob. The labeling works, is in the pipeline, and matches OpenCV's own function exactly; some cleanup is still open. Update this before sending on Sunday.
 
 ## Done this week
 
@@ -8,6 +8,7 @@
 - **Noise cleanup before labeling:** the mask now goes through a morphological open (3x3, removes specks) then close (7x7, fills holes and gaps in cars) before labeling. The small noisy blobs are gone on the main clip. It costs almost nothing: 12.8 ms/frame at half resolution, unchanged from before.
 - **New test footage:** four I-5 overpass clips. The raw clips drifted by 59–107 px, too much for background subtraction, so I stabilized them in software. `i5-incoming` came out at 1.3 px and is now the development clip for labeling (sparse traffic, clean masks). `i5-outgoing` is marginal (7.7 px) and unused for now.
 - **Housekeeping:** clip metadata updated for the new footage; macOS editor setup fixed.
+- **Merged the two machines' work (Oct 10):** the Windows work (labeling split into `ccl.cpp`/`ccl.hpp`) and the Mac work (portable build, morphology, the OpenCV comparison test) had been developed on separate branches. They are now merged into `main` and pushed. Three files conflicted (the Makefile, `main.cpp`, the log) and were resolved by hand. After the merge the project builds cleanly on Windows and processes the full main clip (1,500 frames) at half resolution in 15.9 s, about 10.6 ms/frame.
 
 ## Key findings
 
@@ -18,7 +19,7 @@
 
 ## Still open from Week 3 (to finish or carry over)
 
-- Split the labeling code into its own source files (done on the Windows PC, not yet merged with this week's changes).
+- Point the comparison test at the shared `ccl.hpp` instead of its own copy of the labeling code, so the two can't drift apart. (The code split itself is done and merged.)
 - Move the minimum-blob-size filter out of the drawing code so later stages don't see tiny blobs.
 - Check that the close step doesn't merge two nearby cars into one box.
 

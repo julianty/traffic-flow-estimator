@@ -355,3 +355,33 @@ Open
 
 - Fix the other path variable names in `ccl_check.cpp` when it moves to `ccl.hpp`; absolute macOS video paths are hardcoded
 - Remaining Week 3: move the blob area filter out of `render`; check whether the 7x7 close merges two nearby cars
+
+### 10-10-26 (Week 3: merging the Windows and macOS work):
+
+Merged `origin/week3-docs` (which contains `cross-platform-setup` and `morphology`, one linear chain of 6 commits) into local `main` (3 Windows commits: `ccl.*` split, log, Makefile). Merge commit `41bc4a9`, pushed.
+
+Steps
+- Committed the Windows work first (on a short-lived `local-ccl` branch, fast-forwarded into `main`, branch deleted). The two sides had then diverged from `c5d3a5b`, so no fast-forward was possible and a merge commit was needed
+- `git merge-tree --write-tree --name-only HEAD origin/week3-docs` simulates the merge without touching the repo: predicted the 3 conflicts (`Makefile`, `log.md`, `src/main.cpp`) before running it
+- Resolved in the VS Code merge editor; **Complete Merge** saves and stages the file. `git merge --abort` backs out any time before the commit
+- `log.md`: both sides appended entries at the end, kept both, Windows first
+- `Makefile`: one `g++` line. Combined: source list from the Windows side (`ccl.cpp` included), flags from the Mac side (`pkg-config --cflags` / `--libs-only-L`, no hardcoded `-I`). The `-lopencv_*` list stays by hand: `--libs-only-L` outputs only the search directories, not the `-l` flags
+- `src/main.cpp`: one conflict at the `label` call. Took the incoming side only (morphology open/close into `filterMask`, then `label(filterMask, ...)`), since it is a superset of the Windows line `label(binMask, ...)`. Accepting both would label every frame twice
+
+Verification (Windows, `-g` build)
+- `make` clean, no warnings
+- Headless `auckland-hwy` (`16516296_1920_1080_25fps.mp4`), `--scale 0.5`: 15.9 s / 1500 frames = ~10.6 ms/frame (94 fps). Windows numbers: 10.9 ms/frame before morphology (10-7), so morphology adds little here too. Not comparable to the macOS 12.8 ms (different machine)
+- Not recorded: a visual check of the cleaned mask in the interactive window. Worth doing to confirm `render` shows `filterMask` and the small noisy blobs are gone
+
+What I learned
+- `origin/week3-docs` is a remote-tracking reference: a local bookmark of where the branch was at the last `git fetch`. `git merge` with it works offline and does not contact the remote
+- Fast-forward is only possible when the current branch tip is an ancestor of what is being merged. A local commit on `main` that upstream doesn't have makes the histories diverge
+- The merge base is a commit (`c5d3a5b`), not a branch name; it stays the same after branch labels move
+- Clips in `source-videos/` use the Pexels ID filename, not the `meta.json` alias (a headless run with the alias fails with "Capture failed")
+
+Open
+- This entry supersedes two notes in the 10-9-26 macOS entries: "`ccl.hpp`/`ccl.cpp` split exists on the Windows PC only" and "Local `main` is 3 commits ahead". Both are resolved by this merge
+- `CLAUDE.md` update commit (`08753de`) not pushed yet
+- Delete the merged remote branches: `cross-platform-setup`, `morphology`, `week3-docs`
+- `scratch/ccl_check.cpp` still has its own copy of `Blob`/`floodFill`/`label`; point it at `ccl.hpp`
+- Interactive visual check of the merged pipeline (see above)
