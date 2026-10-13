@@ -30,3 +30,34 @@
 **Behind schedule?** No. Warm-up measurement and the playback re-test are ~30 min of leftover; fold them into the first Week 3 session (warm-up N matters before counting in Week 5, not before CCL).
 
 **Next week:** Week 3 (Oct 6–12) — implement BFS connected-components labeling on the thresholded MOG2 mask → bounding boxes per blob (add `ccl.cpp`/`ccl.hpp` to both Makefile lists; draw boxes only on the display `frame`, never on `imgScaled`/`mask`).
+
+## 2026-10-12 — Week 3 (Oct 6–12): BFS connected-components labeling → bounding boxes per blob
+**Status:** On track — BFS CCL is in the pipeline, split into `src/ccl.*`, and matches `cv::connectedComponentsWithStats` exactly at 4- and 8-connectivity; what's left is small tuning that overlaps Week 4's "tune noise filtering" item, plus the unsent week-03 report.
+
+**Changes this week:** (21 commits, all on `main` and pushed; no uncommitted changes)
+- BFS step added to the pipeline, then the flood fill refactored (`8b62af5`, `c5d3a5b`)
+- Cross-platform build (Windows MSYS2 + macOS Homebrew) with README setup steps; CLAUDE.md macOS notes (`7a65472`, `1637151`, `645d1a3`)
+- Morphology before labeling: open 3x3 → close 7x7 (`273adae`)
+- i5 clip metadata in `meta.json`, week-03 report draft (`2ffd2cd`)
+- `scratch/ccl_check.cpp`: BFS vs. `connectedComponentsWithStats` harness — 0 mismatches over 3,755 frames on both Auckland clips (`658ce3f`)
+- CCL moved into `src/ccl.cpp`/`ccl.hpp`, added to the Makefile (`fd25020`, `0420f4e`)
+- Merged `origin/week3-docs` (Mac and Windows branches) into `main`, 3 conflicts resolved by hand; Windows re-verified at ~10.6 ms/frame @0.5 (`41bc4a9`, `08753de`); stale remote branches are gone (only `origin/main` remains)
+- `--kneighbors <4|8>` flag, default 4; display-only area filter removed from `render` (`b90e5fd`, `906c207`)
+- `ccl_check` now links the shared `ccl.*` (no private copy); 0 mismatches at both 4 and 8 on `auckland-fwy` @1.0 (2,255 frames) after adding sort tie-breakers (`90a2758`)
+- Bookkeeping: log entries, week-03 report updates, `assets/` gitignored (`6c5524c`, `6cd99dd`, `93d7bb0`, `a5df091`, `4856d31`, `c587439`)
+- Untracked: an empty `-p/` directory at the repo root (Oct 10, likely from a `mkdir -p` that ran under `cmd`); harmless, can be removed
+
+**Roadmap progress:**
+- Week 3 BFS labeling + blob boxes + area-sum debug check: done (`8b62af5`, `fd25020`)
+- Week 3 sanity check against OpenCV: done, stronger than planned — `connectedComponentsWithStats` instead of `findContours`, exact match on boxes/areas/centroids at 4 and 8 (`658ce3f`, `90a2758`). Gaps: edge-touching blobs and the i5 clip not specifically covered
+- Week 3 morphology: done (`273adae`)
+- Week 3 4 vs. 8 connectivity: partial — flag done and verified; per-frame blob-count comparison on `auckland-hwy` not done (`ccl_check`'s "Total blobs" is last-frame only, so it can't answer this yet)
+- Week 3 min-blob-size filter: not started — removed from `render` in `b90e5fd`, not re-added anywhere, so no stage currently filters tiny blobs
+- Week 3 check whether the 7x7 close merges nearby cars: done as a finding — merging is confirmed on `auckland-hwy` (screenshots in `assets/`); fix not started
+- Week 3 `reports/week-03.md`: partial — draft is current through Oct 10 but still says "Update this before sending on Sunday"; the Sun Oct 11 send date has passed
+- Week 2 carry-over, measure warm-up frames: not started (still under Open questions in CLAUDE.md)
+- CLAUDE.md Code layout still says `render` draws boxes with `area >= blobAreaThreshold`, which `b90e5fd` removed
+
+**Behind schedule?** No on the core milestone. Late items are small: the week-03 report (due Oct 11) and the warm-up measurement (Week 2). Catch-up: finalize and send the report today, then make the first Week 4 session the min-blob-size filter as a real pipeline stage plus a per-run average/max blob count at k=4 vs. k=8 on `auckland-hwy` — both feed directly into NMS and noise tuning. Merged cars are the real risk: NMS dedupes overlapping boxes but won't split one merged blob, so budget time for a smaller close kernel or a split step this week, not later.
+
+**Next week:** Week 4 (Oct 13–19) — implement heap-based NMS; tune noise filtering (min blob size, morphology kernels, shadow handling) and decide 1.0 vs. 0.5 processing scale.
