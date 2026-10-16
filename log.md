@@ -427,3 +427,33 @@ What I learned
 Open
 - Compare per-frame blob counts at 4 vs. 8 on `auckland-hwy` (change the print to a per-run average/max)
 - `ccl_check` video path and `scale` are still constants in the source
+
+### 10-16-26 (Week 4: `BlobMaxHeap` and the IoU helper for NMS):
+
+Started heap-based NMS. Julian wrote `src/heap.*` and the IoU helper in `src/nms.cpp`; the check program `scratch/heap_check.cpp` was written by Claude.
+
+- `BlobMaxHeap` (`src/heap.hpp` / `heap.cpp`): max-heap of `Blob` copies, ranked by area; ties go to the smaller `y`, then the smaller `x`. Bulk-build constructor (`siftDown` from index `n/2 - 1` down to 0, O(n)), `top`, `pop`, `empty`, `size`. No `push`/`siftUp`, since NMS only builds and pops. `top`/`pop` on an empty heap assert
+- `iouScore` in `src/nms.cpp`: corner math by hand; intersection and union areas as `int`, divided as `double`, 0 when disjoint or the union is 0. The NMS loop and its public declaration are not written yet
+- `build/heap_check.exe`: random blobs (sizes 0, 1, 2, 3, 4, 5, 6, 7, 10, 31, 100, 1000; 200 trials each; areas 1-8 and positions 0-5 so ties are common), build, pop everything. Compared against the same blobs sorted with an independent copy of the ranking rule, and against `std::priority_queue` on area. 233,800 pops, 0 failures
+- Makefile: added `heap.cpp`/`nms.cpp` to `main.exe` and a `heap_check.exe` rule (the first draft had a `--clflags` typo and linked `ccl.cpp` instead of `heap.cpp`). `make` builds `main.exe` clean
+
+What I learned
+- Sifting is the repair step after a removal or insertion: sift-down moves an item below its larger child until the parent is bigger; sift-up moves an inserted item above a smaller parent. A bulk build calls `siftDown` on each non-leaf from the last parent upward, which is O(n), versus O(n log n) for n separate pushes
+- Pop is O(log n); only peeking at the max is O(1)
+- Move the last element into the root, shrink, then `siftDown(0)`. Use `pop_back()`; `erase(end())` is undefined behavior (`end()` is one past the last element)
+- `siftDown` already returns on 0 or 1 elements (`left >= n`), so `pop` needs no special case for a small heap
+- `br()` on a `cv::Rect` is exclusive (`x + width`), so width is `a - x` with no `+1`; y grows downward, so height is `b - y`. Two sign mistakes cancelled in the first IoU draft and gave the right answer by accident
+- Dividing two `int`s truncates; convert one operand to `double` first
+- `_Tp` in the OpenCV docs is the template type parameter: `cv::Rect` is `Rect_<int>`, `cv::Point2f` is `Point_<float>`. Names with a leading underscore and a capital letter are reserved for the implementation
+- A locally named `size` hides the member function `size()` inside a member function; legal, but rename it
+- In a `.cpp`, define members as `Class::name(...)`; do not redefine the class. `const` after the parameter list is part of the signature. `explicit` goes on the declaration only
+- `assert` is active here because the build has `-g` and no `-DNDEBUG`
+- `std::priority_queue` and `std::make_heap`/`push_heap`/`pop_heap` exist, and are used here only as a test reference, since the heap is the project's own data structure
+
+Open
+- The NMS loop: pop the best blob, drop it if its IoU with any kept box is over the threshold, else keep it. Decide the output (blobs vs. indices) and the threshold
+- Blob pixels never overlap, so check on `auckland-hwy` when two bounding boxes overlap enough for NMS to matter (split car? car plus shadow?). If it never happens, that is a finding for the report
+- `nms.hpp` has no include guard or declaration yet
+- `heap_check` only exercises the public interface; no direct "parent ranks above children" check
+- Week 3 carry-overs: 4 vs. 8 blob counts, min-blob-size filter outside `render`, close-kernel merging
+- `reports/week-03.md`: confirm it was sent; write `reports/week-04.md` by Sun Oct 18
