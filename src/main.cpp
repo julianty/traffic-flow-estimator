@@ -3,13 +3,15 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/video/background_segm.hpp>
 #include <opencv2/imgproc.hpp>
-#include"args.hpp"
-#include"ccl.hpp"
+#include "args.hpp"
+#include "ccl.hpp"
+#include "nms.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <vector>
 #include <queue>
+#include <optional>
 
 namespace {
     // Parameter order (both functions): inputs, then outputs
@@ -28,15 +30,26 @@ namespace {
         mog2->apply(imgScaled, mask);
         
     }
+    // Pipeline Parameters
+    //    Mog2
+    constexpr int mog2History = 500; // default 500
+    constexpr double mog2VarThreshold = 16; // default 16.0
+    constexpr double mog2LearningRate = 0.003; // default -1 (it gets computed as a fxn of history)
+    //    blob filtering
     const int blobAreaThreshold = 100;
+    constexpr double iouThreshold = 0.5;
+
+    // Font control constants
     constexpr double refFontScale = 1.2;
     constexpr int refFontWt = 2;
     constexpr int refFrameHeight = 540;
     constexpr int refMargin = 20;
     constexpr int counterFont = cv::FONT_HERSHEY_SIMPLEX;
     constexpr const char* counterSample = "Frame: 0000";  // clips are <= 2255 frames
+
     void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count, const std::vector<Blob>& blobs,
-                cv::Mat& mask3c, cv::Mat& frame) {
+                cv::Mat& mask3c, cv::Mat& frame,
+                std::optional<int> blobCount = std::nullopt) {
         // Convert mask into 3 channel
         cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2BGR, 3);
 
@@ -61,7 +74,11 @@ namespace {
         cv::Point frameCtCoords(frame.cols - textSize.width - margin, frame.rows - margin - baseline);
         cv::putText(frame, "Frame: " + std::to_string(frame_count),
             frameCtCoords, counterFont, fontScale, {0, 255, 0}, fontWt);
-
+        // Optionally display blob counts
+        if (blobCount.has_value()) {
+            cv::putText(frame, "Blobs: " + std::to_string(blobCount.value()),
+            frameCtCoords - cv::Point(0, textSize.height + baseline), counterFont, fontScale, {0, 255, 0}, fontWt);
+        }
 
         // Draw next frame
         cv::imshow("main", frame);
@@ -140,7 +157,7 @@ int main(int argc, char* argv[]) {
     // Instantiate resize array
     cv::Mat imgScaled;
     // Initialize the MOG2 background subtractor
-    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2(500, 16.0, true);
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2(mog2History, mog2VarThreshold, true);
     // Initialize mask object
     cv::Mat mask;
     // Initialize binary mask
@@ -177,9 +194,20 @@ int main(int argc, char* argv[]) {
         label(filterMask, labels, blobs, flags.kneighbors);
         frame_count++;
 
+        // Filter out small blobs
+        blobs.erase(
+            std::remove_if(blobs.begin(), blobs.end(), [](const Blob& b) {
+                return b.area < blobAreaThreshold;
+            }),
+            blobs.end()
+        );
+
+        // Run Non-max suppression
+        std::vector<Blob> keptBlobs = nms(blobs, iouThreshold);
+
         if (!flags.headless) {
             // Draw next frame
-            render(imgScaled, filterMask, frame_count, blobs, mask3c, frame);
+            render(imgScaled, filterMask, frame_count, keptBlobs, mask3c, frame, keptBlobs.size());
 
             // Handle any inputs
             KeyAction action = handleInput();
