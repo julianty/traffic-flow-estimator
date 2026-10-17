@@ -26,42 +26,45 @@ namespace {
         int blurK;           // Gaussian blur kernel on the input (odd); 0 or 1 = no blur
         double learningRate; // -1 = MOG2's automatic rate
         int warmupFrames;    // frames 1..warmupFrames use the automatic rate, then learningRate
+        int openK;           // morphological open kernel (square); 0 or 1 = skip
+        int closeK;          // morphological close kernel (square); 0 or 1 = skip
+        int neighbors;       // blob connectivity: 4 or 8
     };
 
     // Edit freely. The first entry should be your current settings in main.cpp.
     const std::vector<Variant> variants = {
-        // name                      vt    hist  blur  lr      warmup
-        {"baseline vt16 h500",       16.0,  500, 0, -1.0,    0},
-        {"lr0.002",                  16.0,  500, 0,  0.002,  0},
-        {"lr0.003",                  16.0,  500, 0,  0.003,  0},
-        {"lr0.005",                  16.0,  500, 0,  0.005,  0},
-        {"auto h1000",               16.0, 1000, 0, -1.0,    0},
-        {"auto 300 then 0.003",      16.0,  500, 0,  0.003,  300},
-        {"auto 300 then 0.002",      16.0,  500, 0,  0.002,  300},
-        {"vt12 lr0.003",             12.0,  500, 0,  0.003,  0},
+        // name                    vt    hist  blur  lr      warmup open close nb
+        {"4-conn, close 7",        16.0,  500, 0,  0.003,  0,     3,   7,    4},
+        {"8-conn, close 7",        16.0,  500, 0,  0.003,  0,     3,   7,    8},
+        {"4-conn, close 3",        16.0,  500, 0,  0.003,  0,     3,   3,    4},
+        {"8-conn, close 3",        16.0,  500, 0,  0.003,  0,     3,   3,    8},
+        {"4-conn, no close",       16.0,  500, 0,  0.003,  0,     3,   0,    4},
+        {"8-conn, no close",       16.0,  500, 0,  0.003,  0,     3,   0,    8},
     };
 
     constexpr bool detectShadows = true;
     constexpr int fgThreshold = 200;      // same as main
-    constexpr int openKernelSize = 3;     // same as main
-    constexpr int closeKernelSize = 7;    // same as main
     constexpr int blobAreaThreshold = 100; // same as main (at scale 0.5)
     constexpr int columns = 3;
     constexpr int refFrameHeight = 540;
 
     // Threshold, morphology and labeling, mirroring main.cpp. Returns the blobs.
-    std::vector<Blob> maskToBlobs(const cv::Mat& rawMask, cv::Mat& filterMask) {
-        static const cv::Mat openKernel =
-            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(openKernelSize, openKernelSize));
-        static const cv::Mat closeKernel =
-            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(closeKernelSize, closeKernelSize));
+    std::vector<Blob> maskToBlobs(const cv::Mat& rawMask, cv::Mat& filterMask, int openK, int closeK,
+                                  int neighbors) {
         cv::Mat binMask;
         cv::threshold(rawMask, binMask, fgThreshold, 255, cv::THRESH_BINARY);
-        cv::morphologyEx(binMask, filterMask, cv::MORPH_OPEN, openKernel);
-        cv::morphologyEx(filterMask, filterMask, cv::MORPH_CLOSE, closeKernel);
+        filterMask = binMask.clone();
+        if (openK > 1) {
+            cv::Mat k = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(openK, openK));
+            cv::morphologyEx(filterMask, filterMask, cv::MORPH_OPEN, k);
+        }
+        if (closeK > 1) {
+            cv::Mat k = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(closeK, closeK));
+            cv::morphologyEx(filterMask, filterMask, cv::MORPH_CLOSE, k);
+        }
         cv::Mat labels;
         std::vector<Blob> blobs;
-        label(filterMask, labels, blobs, Neighbors::Four);
+        label(filterMask, labels, blobs, neighbors == 8 ? Neighbors::Eight : Neighbors::Four);
         return blobs;
     }
 
@@ -142,7 +145,8 @@ int main(int argc, char* argv[]) {
     std::printf("frame %d, scale %.2f, area filter >= %d\n", targetFrame, scale, blobAreaThreshold);
     for (size_t i = 0; i < variants.size(); i++) {
         cv::Mat filterMask;
-        std::vector<Blob> blobs = maskToBlobs(masks[i], filterMask);
+        std::vector<Blob> blobs = maskToBlobs(masks[i], filterMask, variants[i].openK, variants[i].closeK,
+                                             variants[i].neighbors);
         int total = static_cast<int>(blobs.size());
         int kept = 0;
         cv::Mat tile;
