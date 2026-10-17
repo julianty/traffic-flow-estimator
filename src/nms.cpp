@@ -1,6 +1,7 @@
 #include "nms.hpp"
 #include "ccl.hpp"
 #include <opencv2/opencv.hpp>
+#include "heap.hpp"
 
 namespace {
     // Takes two cv::Rect, and outputs the IoU score
@@ -38,4 +39,30 @@ namespace {
         score = static_cast<double>(intersectionArea) / unionArea;
         return score;
     }
+}
+
+
+std::vector<Blob> nms(const std::vector<Blob>& blobs, double iouThreshold) {
+    // Initialize heap
+    BlobMaxHeap blobHeap(blobs);
+    std::vector<Blob> keep;
+
+    // Main loop for adding candidates
+    while (!blobHeap.empty()) {
+        Blob candidate = blobHeap.top();
+        bool disqualify = false;
+        blobHeap.pop();
+
+        // Check against all other kept blobs
+        for (const auto& kBlob : keep) {
+            double score = iouScore(kBlob.bounding_box, candidate.bounding_box);
+            if (score > iouThreshold) {
+                disqualify = true;
+                // Early stop if disqualified
+                break;
+            }
+        }
+        if (!disqualify) keep.push_back(candidate);
+    }
+    return keep;
 }
