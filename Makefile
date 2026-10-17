@@ -14,3 +14,7 @@ build/ccl_check.exe: scratch/ccl_check.cpp src/ccl.cpp src/ccl.hpp
 build/heap_check.exe: scratch/heap_check.cpp src/heap.cpp src/heap.hpp src/ccl.hpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/heap.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
+
+build/nms_check.exe: scratch/nms_check.cpp src/nms.cpp src/nms.hpp src/heap.cpp src/heap.hpp src/ccl.hpp
+	@mkdir -p build
+	g++ -std=c++17 -g $< src/nms.cpp src/heap.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
