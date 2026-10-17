@@ -457,3 +457,37 @@ Open
 - `heap_check` only exercises the public interface; no direct "parent ranks above children" check
 - Week 3 carry-overs: 4 vs. 8 blob counts, min-blob-size filter outside `render`, close-kernel merging
 - `reports/week-03.md`: confirm it was sent; write `reports/week-04.md` by Sun Oct 18
+
+### 10-17-26 (Week 4: `nms()` wired in, area filter, MOG2 and morphology tuning):
+
+Julian wrote `nms()` (`src/nms.*`) and the wiring in `main.cpp`; Claude wrote `scratch/nms_check.cpp` and `scratch/mog2_tune.cpp` and ran the experiments.
+
+- `nms(blobs, iouThreshold)`: build a `BlobMaxHeap`, pop the largest, drop it if any kept box has IoU strictly greater than the threshold, else keep it. First draft had the keep/drop branches inverted and pushed inside a range-for over the vector it was pushing to; fixed. Empty input needs no special case (the `while` never runs, and an empty `keep` skips the `for`)
+- `nms_check`: hand-made cases and 2,000 random trials, all pass. Makefile has a `build/nms_check.exe` rule
+- `main`: erase-remove drops blobs with area < 100, then `nms`, then `render` draws the kept blobs and a `Blobs: N` line (optional `std::optional<int>` parameter, default `std::nullopt`). Fixed `iouThreshold` (was an `int` initialised with 0.5, so it truncated to 0) and moved the pipeline constants above `process()` (a constant used before its declaration is a compile error)
+- IoU does not suppress a small box inside a big one (small / big, near 0), so nested fragments survive NMS. The area filter only removes the specks. Metric decision (keep IoU vs. intersection over the smaller box) is open
+- MOG2 sweep with `mog2_tune` (vt 16/12/10, blur 3/5, `history` 500/1000, learning rate 0.002/0.003/0.005, auto-then-fixed): only a slow fixed rate from the start helped on `auckland-hwy` (frame 336: 21 -> 13 blobs >= 100, 68 -> 26 total). Auto-then-fixed matched the baseline, so the fast early phase is the problem. Gain not clear on `auckland-fwy`. Chose 0.003; wired into `process()` (the constant existed but was not passed to `apply` at first)
+- Ghosts with the fixed rate: frame 10 has 170k fg pixels vs. 10k for auto; visible through frame 60, gone by 100. Skip ~100 frames at the start (tentative)
+- Close kernel none/3/5/7/9 on both clips: 7 is best, 9 merges neighbours (dump truck + next vehicle). `fwy` 336 truck and van touch in the mask and merge at any kernel >= 3 (occlusion, not morphology)
+- 4 vs. 8: identical at close 7 on 4 frames; 8 only differs without the close. Keep 4
+- Shadows: 22.1M shadow pixels (127) over 400 frames, 0 after the threshold at 200
+- Timing: headless `auckland-hwy` @0.5, 3 runs 17.08-17.20 s / 1500 frames = ~11.4 ms/frame (was 10.6, +7%)
+- Images in `assets/` (`Week 4 - ...`, 18 files, gitignored)
+
+What I learned
+- Erase-remove: `v.erase(std::remove_if(first, last, pred), v.end())`; `remove_if` only moves the kept elements forward, the `erase` shrinks. The predicate returns true for elements to remove. `std::erase_if` is C++20
+- Never `push_back` inside a range-for over the same vector (reallocation invalidates the iterators); decide first, add after the loop
+- Default arguments must be trailing, so an optional parameter goes after the output parameters; write the default once, on the first declaration. `std::optional<int>` with `has_value()` / `value()` says "may be absent" in the type
+- `putText` origin is the bottom-left of the text and y grows downward; "up one line" is `y - (height + baseline)`, not `y + ...`. `a - Point(-10, -10)` is `a + Point(10, 10)`
+- `constexpr int x = 0.5;` is 0; the compiler does not warn
+- MOG2: `-1` learning rate = `1 / min(2 * frames, history)`; `varThreshold` is only the foreground cut-off and has no effect on the rate; `varThresholdGen` is a different parameter. Shadows come out as 127 and foreground as 255
+- IoU is the standard NMS score because detectors produce near-duplicate boxes of similar size; connected-component blobs are fragments, so containment is the relevant relation here
+- `make` printing "up to date" means the exe is newer than every listed prerequisite; "Permission denied" on the exe means it is still running
+- The MSYS2 `tzset` warning is harmless (unknown Windows timezone name)
+
+Open
+- Decide the NMS metric; update `nms_check` if it changes
+- Measure the warm-up length (frames 70-100) and settle it before the Week 6 ground-truth count
+- `auckland-hwy` and `auckland-fwy` both judged by eye on 2-4 frames; no ground-truth masks
+- Whether MOG2 mislabels some shadows as foreground (not checked)
+- `reports/week-04.md` drafted; send Sun Oct 18. Confirm week-03 was sent
