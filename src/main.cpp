@@ -14,6 +14,15 @@
 #include <optional>
 
 namespace {
+    // Pipeline Parameters
+    //    Mog2
+    constexpr int mog2History = 500; // default 500
+    constexpr double mog2VarThreshold = 16; // default 16.0
+    constexpr double mog2LearningRate = 0.003; // default -1 (it gets computed as a fxn of history)
+    //    blob filtering
+    const int blobAreaThreshold = 100;
+    constexpr double iouThreshold = 0.5;
+
     // Parameter order (both functions): inputs, then outputs
     void process(const cv::Mat& img, const cv::Ptr<cv::BackgroundSubtractorMOG2>& mog2, double scale,
                  cv::Mat& imgScaled, cv::Mat& mask) {
@@ -27,18 +36,9 @@ namespace {
         }
 
         // Run MOG2
-        mog2->apply(imgScaled, mask);
+        mog2->apply(imgScaled, mask, mog2LearningRate);
         
     }
-    // Pipeline Parameters
-    //    Mog2
-    constexpr int mog2History = 500; // default 500
-    constexpr double mog2VarThreshold = 16; // default 16.0
-    constexpr double mog2LearningRate = 0.003; // default -1 (it gets computed as a fxn of history)
-    //    blob filtering
-    const int blobAreaThreshold = 100;
-    constexpr double iouThreshold = 0.5;
-
     // Font control constants
     constexpr double refFontScale = 1.2;
     constexpr int refFontWt = 2;
