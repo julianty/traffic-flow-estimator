@@ -26,3 +26,7 @@ build/mog2_tune.exe: scratch/mog2_tune.cpp src/ccl.cpp src/ccl.hpp
 build/warmup_check.exe: scratch/warmup_check.cpp src/ccl.cpp src/ccl.hpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
+
+build/frame_grid.exe: scratch/frame_grid.cpp
+	@mkdir -p build
+	g++ -std=c++17 -g $< -o $@ $(shell pkg-config --cflags --libs opencv5)
