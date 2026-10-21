@@ -46,9 +46,12 @@
         "max_shift_px": 1,
         "max_rotation_deg": 0.02
       },
-      "notes": "Tripod, dense traffic, close/telephoto view: expect overlapping vehicles (merged blobs).",
+      "notes": "Tripod, dense traffic, close/telephoto view: expect overlapping vehicles (merged blobs). Left lane is clipped near top of the video",
       "annotations": {
-        "count_line": null,
+        "count_line": [
+          [0, 200],
+          [1919, 200]
+        ],
         "mask_regions": [],
         "ground_truth": {
           "count": null,
