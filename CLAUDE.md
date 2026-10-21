@@ -13,12 +13,13 @@
 - [ ] **Heap-based non-max suppression** — dedupe/filter overlapping blob detections
 
 ### Stretch (attempt if time allows; ask for help if crunched near the deadline)
-- [ ] **Union-find** — merging track associations / components across frames
+- [ ] **Ring buffer** — fixed-size per-track history of recent centroids; smooths the noisy blob centroids into a velocity estimate (feeds position prediction and the per-vehicle velocity deliverable)
 - [ ] **KD-tree** — nearest-neighbor matching for frame-to-frame vehicle tracking
+- Considered, not planned: **union-find** for merging split tracks (see Open questions)
 
 ### Deliverables
 - **Minimum:** vehicle counts crossing a defined line/region in frame
-- **Stretch:** per-vehicle speed estimate (needs pixel↔world calibration), per-lane counts (needs lane geometry)
+- **Stretch:** per-vehicle velocity in pixels/frame (from the ring buffer of recent centroids), then speed in world units (needs pixel↔world calibration), per-lane counts (needs lane geometry)
 - **Benchmark:** pipeline counts vs. manually-counted ground truth on the same footage
 
 ### Explicitly third-party (not reimplementing)
@@ -84,9 +85,9 @@
 | 4 | Oct 13–19 | Implement heap-based NMS; tune noise filtering (min blob size, morphology). Progress (Oct 16): `BlobMaxHeap` (`src/heap.*`) written and tested against a sorted reference and `std::priority_queue` ✅; IoU helper in `src/nms.cpp` ✅. `nms()` written, tested (`scratch/nms_check.cpp`) and wired into `main` after the min-blob-size filter ✅ (Oct 17). Week 3 carry-overs done ✅: min-blob-size filter (erase-remove, area < 100 at 0.5), 4 vs. 8 (identical at the 7x7 close; keep 4), close kernel (7 is best of none/3/5/7/9; 9 merges neighbours). MOG2 tuned ✅: fixed learning rate 0.003 (see Open questions); varThreshold, blur and `history` made little difference. Headless `auckland-hwy` @0.5 = 17.1 s / 1500 frames (~11.4 ms/frame). `reports/week-04.md` drafted (send Sun Oct 18). Left: **decide the NMS metric** (plain IoU doesn't suppress nested boxes, see Open questions), measure the warm-up length, commit-ready docs |
 | 5 | Oct 20–26 | Naive centroid tracking + line-crossing counting → first end-to-end counts |
 | 6 | Oct 27–Nov 2 | Manual ground-truth count on the same clip; measure accuracy; iterate on misses/double-counts/occlusion |
-| 7 | Nov 3–9 | Buffer/iteration on accuracy. **Decision point:** go/no-go on stretch structures based on time left |
-| 8 | Nov 10–16 | Stretch: union-find and/or KD-tree tracking (if pursuing) — else polish + more test clips |
-| 9 | Nov 17–23 | Stretch: speed estimation / per-lane counts (if time allows) |
+| 7 | Nov 3–9 | Buffer/iteration on accuracy. **Decision point:** go/no-go on stretch structures based on time left. If the Week 6 error breakdown shows merged vehicles dominate, try **blob splitting** (marker-controlled watershed on the distance transform, or track-seeded multi-source BFS; see Open questions) and re-measure against the same ground truth |
+| 8 | Nov 10–16 | Stretch: ring buffer of recent centroids (velocity, position prediction) and/or KD-tree tracking (if pursuing) — else polish + more test clips |
+| 9 | Nov 17–23 | Stretch: per-vehicle velocity (px/frame) and speed estimation / per-lane counts (if time allows) |
 | 10 | Nov 24–30 | Thanksgiving week, light load: formal write-up, code cleanup, finalize benchmark numbers |
 | — | Dec 1–2 | Final polish, submit |
 
@@ -103,4 +104,11 @@
 - Count-line coordinates: scale down once at startup vs. scale results up per frame (`meta.json` stays full-res)
 - ~~Display flag~~ → done Oct 4 (`--headless`). Still open: headless read-only run for decode's share; MOG2 on grayscale (see `log.md` 10-1-26)
 - Optional: pass `cv::CAP_FFMPEG` to `VideoCapture` to skip GStreamer (noisy warnings on bad paths; makes the timed decoder explicit)
+- Union-find (dropped from stretch Oct 18): only worth building if Week 6 shows split tracks (occlusion) causing double-counts. Simple alternative: fold the absorbed track into the other in a map, erase it, and OR the "counted" flags. The merge rule (short time gap, B starts near A's predicted position, optional direction/size checks) is the real decision logic; union-find would only be the bookkeeping
+- Brute-force comparisons for the write-up (optional, Week 7 or 10): label propagation and DFS vs. the BFS labeling (peak queue/stack size, time), brute-force all-pairs NMS vs. the heap (synthetic thousands-of-boxes test), brute-force vs. KD-tree matching (synthetic scaling). Not in the original scope; check whether the advisor expects any
+- Merged vehicles are a mask-stage problem, not an NMS one (NMS only picks among blobs that already exist). If Week 6 shows merges dominate the errors, options from cheapest up:
+  - Area-based count: add `round(area / typical single-car area)` when a track crosses the line (crude; trucks break it)
+  - **Marker-controlled watershed on the distance transform** (blob splitting): `cv::distanceTransform` on each large blob, keep pixels above ~50-70% of the blob's max as seeds (my `label()` can find them), then grow the seeds back over the blob with `cv::watershed` or my own multi-source BFS (cut falls midway between seeds). Gate it to blobs bigger than a typical car, require a minimum seed separation, and test at 1.0 as well as 0.5 (the neck may be only a few pixels at 0.5). Fails on truck+car (off-center cut), heavy overlap with no neck, and long vehicles (bus) over-split
+  - **Track-seeded splitting**: when a blob contains 2+ predicted track positions (last centroid + ring-buffer velocity), run a multi-source BFS from those seeds. Keeps track identities through the overlap, but can't split cars that enter already merged and the seeds drift. Could fall back to the distance transform when a blob is too big but holds one seed
+  - Evaluate against the Week 6 baseline on the same ground truth, and check `auckland-fwy` without re-tuning
 - Step forward/back controls: forward is simple; back needs a circular buffer (MOG2 can't un-learn). Optional
