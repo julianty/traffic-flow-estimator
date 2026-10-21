@@ -16,6 +16,7 @@
 namespace {
     // Pipeline Parameters
     //    Mog2
+    constexpr int warmupFrames = 120; // Ghosts appear before MOG2 learns the background pixels
     constexpr int mog2History = 500; // default 500
     constexpr double mog2VarThreshold = 16; // default 16.0
     constexpr double mog2LearningRate = 0.003; // default -1 (it gets computed as a fxn of history)
