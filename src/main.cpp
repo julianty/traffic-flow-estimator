@@ -23,6 +23,9 @@ namespace {
     //    blob filtering
     const int blobAreaThreshold = 100;
     constexpr double iouThreshold = 0.5;
+    //    count line, drawn from two points
+    const cv::Point pointA(0, 200); // full resolution
+    const cv::Point pointB(1919, 200);
 
     // Parameter order (both functions): inputs, then outputs
     void process(const cv::Mat& img, const cv::Ptr<cv::BackgroundSubtractorMOG2>& mog2, double scale,
@@ -49,6 +52,7 @@ namespace {
     constexpr const char* counterSample = "Frame: 0000";  // clips are <= 2255 frames
 
     void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count, const std::vector<Blob>& blobs,
+                const cv::Point countLineA, const cv::Point countLineB,
                 cv::Mat& mask3c, cv::Mat& frame,
                 std::optional<int> blobCount = std::nullopt) {
         // Convert mask into 3 channel
@@ -56,6 +60,9 @@ namespace {
 
         // Concat the img and mask
         cv::hconcat(imgScaled, mask3c, frame);
+
+        // Draw the count line
+        cv::line(frame, countLineA, countLineB + cv::Point(imgScaled.cols, 0), {0, 0, 255}, 2);
 
         // Draw frame counter, sized relative to a 540p frame
         double ratio = static_cast<double>(frame.rows) / refFrameHeight;
@@ -179,6 +186,10 @@ int main(int argc, char* argv[]) {
     cv::Mat labels;
     std::vector<Blob> blobs;
 
+    // Scale full-res count-line to flags.scale
+    cv::Point countLine1 = pointA * flags.scale;
+    cv::Point countLine2 = pointB * flags.scale;
+    
     // Main loop
     while (cap.read(img)) {
         // Reize and apply mog2
@@ -208,7 +219,11 @@ int main(int argc, char* argv[]) {
 
         if (!flags.headless) {
             // Draw next frame
-            render(imgScaled, filterMask, frame_count, keptBlobs, mask3c, frame, keptBlobs.size());
+            render(imgScaled, filterMask, frame_count, keptBlobs, 
+                countLine1,
+                countLine2, 
+                mask3c, frame, 
+                keptBlobs.size());
 
             // Handle any inputs
             KeyAction action = handleInput();
