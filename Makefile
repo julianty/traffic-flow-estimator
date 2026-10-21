@@ -22,3 +22,7 @@ build/nms_check.exe: scratch/nms_check.cpp src/nms.cpp src/nms.hpp src/heap.cpp 
 build/mog2_tune.exe: scratch/mog2_tune.cpp src/ccl.cpp src/ccl.hpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
+
+build/warmup_check.exe: scratch/warmup_check.cpp src/ccl.cpp src/ccl.hpp
+	@mkdir -p build
+	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
