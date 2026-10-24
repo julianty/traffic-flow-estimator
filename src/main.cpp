@@ -6,6 +6,7 @@
 #include "args.hpp"
 #include "ccl.hpp"
 #include "nms.hpp"
+#include "meta.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cmath>
@@ -23,9 +24,9 @@ namespace {
     //    blob filtering
     const int blobAreaThreshold = 100;
     constexpr double iouThreshold = 0.5;
-    //    count line, drawn from two points
-    const cv::Point pointA(0, 200); // full resolution
-    const cv::Point pointB(1919, 200);
+    //    metadata path
+    const std::string metadataPath = "source-videos/meta.json";
+
 
     // Parameter order (both functions): inputs, then outputs
     void process(const cv::Mat& img, const cv::Ptr<cv::BackgroundSubtractorMOG2>& mog2, double scale,
@@ -61,8 +62,11 @@ namespace {
         // Concat the img and mask
         cv::hconcat(imgScaled, mask3c, frame);
 
-        // Draw the count line
-        cv::line(frame, countLineA, countLineB + cv::Point(imgScaled.cols, 0), {0, 0, 255}, 2);
+        // Draw the count lines
+        cv::line(frame, countLineA, countLineB, {0, 0, 255}, 2);
+        cv::line(frame, countLineA + cv::Point(imgScaled.cols, 0), 
+                        countLineB + cv::Point(imgScaled.cols, 0), 
+                        {0, 0, 255}, 2);
 
         // Draw frame counter, sized relative to a 540p frame
         double ratio = static_cast<double>(frame.rows) / refFrameHeight;
@@ -153,6 +157,22 @@ int main(int argc, char* argv[]) {
         std::cerr << "Capture failed for provided path " << flags.video_path << std::endl;
         return 1;
     }
+    // Load in metadata
+    ClipMeta metaData;
+    try {
+        metaData = loadClipMeta(metadataPath, flags.video_path);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+    // Check clip meta against loaded clip
+    int clipH = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+    int clipW = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    if (metaData.width != clipW || metaData.height != clipH) {
+        std::string error_message = "Clip height or width does not match recorded meta for " + flags.video_path;
+        std::cerr << error_message << std::endl;
+        return 1;
+    }
 
     // Measure time (start stopwatch)
     auto start = std::chrono::steady_clock::now();
@@ -187,8 +207,8 @@ int main(int argc, char* argv[]) {
     std::vector<Blob> blobs;
 
     // Scale full-res count-line to flags.scale
-    cv::Point countLine1 = pointA * flags.scale;
-    cv::Point countLine2 = pointB * flags.scale;
+    cv::Point countLine1 = metaData.countLine.countLineA * flags.scale;
+    cv::Point countLine2 = metaData.countLine.countLineB * flags.scale;
     
     // Main loop
     while (cap.read(img)) {

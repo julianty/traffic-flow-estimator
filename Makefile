@@ -1,7 +1,12 @@
-build/main.exe: src/main.cpp src/args.cpp src/args.hpp src/ccl.cpp src/ccl.hpp src/nms.cpp src/nms.hpp src/heap.hpp src/heap.cpp
-	@mkdir -p build
-	g++ -std=c++17 -g src/main.cpp src/args.cpp src/ccl.cpp src/nms.cpp src/heap.cpp -o $@ $(shell pkg-config --cflags opencv5) $(shell pkg-config --libs-only-L opencv5) -lopencv_videoio -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgproc
+MAIN_SRCS := src/main.cpp src/args.cpp src/ccl.cpp src/nms.cpp src/heap.cpp src/meta.cpp
+MAIN_HDRS := src/args.hpp src/ccl.hpp src/nms.hpp src/heap.hpp src/meta.hpp
 
+build/main.exe: $(MAIN_SRCS) $(MAIN_HDRS)
+	@mkdir -p build
+	g++ -std=c++17 -g $(MAIN_SRCS) -o $@ $(shell pkg-config --cflags opencv5) $(shell pkg-config --libs-only-L opencv5) -lopencv_videoio -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgproc
+
+
+# Scratch builds
 
 build/hello_opencv.exe: scratch/hello_opencv.cpp
 	@mkdir -p build
