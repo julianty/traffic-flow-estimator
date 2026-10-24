@@ -491,3 +491,18 @@ Open
 - `auckland-hwy` and `auckland-fwy` both judged by eye on 2-4 frames; no ground-truth masks
 - Whether MOG2 mislabels some shadows as foreground (not checked)
 - `reports/week-04.md` drafted; send Sun Oct 18. Confirm week-03 was sent
+
+### 10-24-26 (Week 5: count line loaded from `meta.json`):
+
+Julian wrote `src/meta.*` and the `main` wiring; Claude built and ran the checks.
+
+- `loadClipMeta(metaPath, videoPath)` (`src/meta.*`) matches the clip by file basename, then reads `width`, `height` and `annotations.count_line` (two points) into a `ClipMeta`. Throws `std::runtime_error` for an unopenable file, an unknown clip, or a missing/malformed count line. `main` catches it, prints the message and returns 1, then checks the clip's width/height against the metadata
+- `main` scales the loaded count line by `flags.scale`; `render` draws it on both the frame and the mask panel (replaces the hardcoded `pointA`/`pointB`)
+- Makefile: `MAIN_SRCS`/`MAIN_HDRS` variables, `meta.cpp`/`meta.hpp` added
+- Checked: `make` clean; headless `auckland-hwy` @0.5 = 1500 frames, 17.4 s (~11.6 ms/frame, no slowdown); `auckland-fwy` -> "Count line not defined in meta.json" (no line set yet); a copy of the clip under another filename -> "Clip other.mp4 not found in meta.json". Not tested: the width/height mismatch error
+- Not yet committed. `hwy_f200.png` in the repo root is a stray screenshot
+
+Open
+- Commit the metadata change (new commit, Julian's code, no Claude co-author line)
+- Set a count line for `auckland-fwy` before running it through the tracker
+- Tracker, line-crossing counter, `reports/week-05.md` (send Sun Oct 25)
