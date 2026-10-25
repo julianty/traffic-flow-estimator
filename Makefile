@@ -1,5 +1,5 @@
-MAIN_SRCS := src/main.cpp src/args.cpp src/ccl.cpp src/nms.cpp src/heap.cpp src/meta.cpp
-MAIN_HDRS := src/args.hpp src/ccl.hpp src/nms.hpp src/heap.hpp src/meta.hpp
+MAIN_SRCS := src/main.cpp src/args.cpp src/ccl.cpp src/nms.cpp src/heap.cpp src/meta.cpp src/tracker.cpp
+MAIN_HDRS := src/args.hpp src/ccl.hpp src/nms.hpp src/heap.hpp src/meta.hpp src/tracker.hpp
 
 build/main.exe: $(MAIN_SRCS) $(MAIN_HDRS)
 	@mkdir -p build

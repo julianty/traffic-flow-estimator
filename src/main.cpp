@@ -7,12 +7,14 @@
 #include "ccl.hpp"
 #include "nms.hpp"
 #include "meta.hpp"
+#include "tracker.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <vector>
 #include <queue>
 #include <optional>
+
 
 namespace {
     // Pipeline Parameters
@@ -22,7 +24,7 @@ namespace {
     constexpr double mog2VarThreshold = 16; // default 16.0
     constexpr double mog2LearningRate = 0.003; // default -1 (it gets computed as a fxn of history)
     //    blob filtering
-    const int blobAreaThreshold = 100;
+    const int blobAreaThreshold = 200;
     constexpr double iouThreshold = 0.5;
     //    metadata path
     const std::string metadataPath = "source-videos/meta.json";
@@ -48,13 +50,14 @@ namespace {
     constexpr double refFontScale = 1.2;
     constexpr int refFontWt = 2;
     constexpr int refFrameHeight = 540;
-    constexpr int refMargin = 20;
+    constexpr int refMargin = 40;
     constexpr int counterFont = cv::FONT_HERSHEY_SIMPLEX;
     constexpr const char* counterSample = "Frame: 0000";  // clips are <= 2255 frames
 
     void render(const cv::Mat& imgScaled, const cv::Mat& mask, int frame_count, const std::vector<Blob>& blobs,
                 const cv::Point countLineA, const cv::Point countLineB,
                 cv::Mat& mask3c, cv::Mat& frame,
+                int crossingCount, const std::vector<Track>& tracks,
                 std::optional<int> blobCount = std::nullopt) {
         // Convert mask into 3 channel
         cv::cvtColor(mask, mask3c, cv::COLOR_GRAY2BGR, 3);
@@ -79,6 +82,15 @@ namespace {
             cv::rectangle(frame, blob.bounding_box, cv::Scalar(225, 0, 0), 2);
         }
 
+        // Draw the tracked centroids
+        for (const Track& t : tracks) {
+            cv::Point pt = cv::Point(t.centroid);
+            cv::Scalar color = t.counted ? cv::Scalar(0, 255, 0) : cv::Scalar(128, 128, 0);
+            cv::circle(frame, pt, 4, color, -1);
+            cv::putText(frame, std::to_string(t.id), 
+                pt + cv::Point(2, -2), counterFont, fontScale * 0.4, color, 1);
+        }
+
         // Measure a fixed-width sample so the text doesn't shift left as digits are added
         int baseline = 0;
         cv::Size textSize = cv::getTextSize(counterSample, counterFont, fontScale, fontWt, &baseline);
@@ -86,10 +98,15 @@ namespace {
         cv::Point frameCtCoords(frame.cols - textSize.width - margin, frame.rows - margin - baseline);
         cv::putText(frame, "Frame: " + std::to_string(frame_count),
             frameCtCoords, counterFont, fontScale, {0, 255, 0}, fontWt);
+
+        // Display crossing counts
+        cv::putText(frame, "Crossings: " + std::to_string(crossingCount),
+            frameCtCoords - cv::Point(0, textSize.height + baseline), counterFont, fontScale, {0, 255, 0}, fontWt);
+
         // Optionally display blob counts
         if (blobCount.has_value()) {
             cv::putText(frame, "Blobs: " + std::to_string(blobCount.value()),
-            frameCtCoords - cv::Point(0, textSize.height + baseline), counterFont, fontScale, {0, 255, 0}, fontWt);
+            frameCtCoords - cv::Point(0, 2*(textSize.height + baseline)), counterFont, fontScale, {0, 255, 0}, fontWt);
         }
 
         // Draw next frame
@@ -209,6 +226,9 @@ int main(int argc, char* argv[]) {
     // Scale full-res count-line to flags.scale
     cv::Point countLine1 = metaData.countLine.countLineA * flags.scale;
     cv::Point countLine2 = metaData.countLine.countLineB * flags.scale;
+
+    // Instantiate tracker
+    Tracker crossingTracker{CountLine{countLine1, countLine2}};
     
     // Main loop
     while (cap.read(img)) {
@@ -237,12 +257,16 @@ int main(int argc, char* argv[]) {
         // Run Non-max suppression
         std::vector<Blob> keptBlobs = nms(blobs, iouThreshold);
 
+        // Call update to crossing
+        crossingTracker.update(keptBlobs, frame_count > warmupFrames);
+
         if (!flags.headless) {
             // Draw next frame
             render(imgScaled, filterMask, frame_count, keptBlobs, 
                 countLine1,
                 countLine2, 
-                mask3c, frame, 
+                mask3c, frame,
+                crossingTracker.count(), crossingTracker.tracks(),
                 keptBlobs.size());
 
             // Handle any inputs
