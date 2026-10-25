@@ -506,3 +506,39 @@ Open
 - Commit the metadata change (new commit, Julian's code, no Claude co-author line)
 - Set a count line for `auckland-fwy` before running it through the tracker
 - Tracker, line-crossing counter, `reports/week-05.md` (send Sun Oct 25)
+
+### 10-25-26 (Week 5: tracker, line-crossing counter, track overlay):
+
+Julian wrote `src/tracker.*` and the `main` wiring; Claude reviewed each step (navigator mode) and wrote no code.
+
+- `Tracker` (`src/tracker.*`): `Track {id, centroid, prevCentroid, missed, hits, counted}`; `update(blobs, countingEnabled)`, `tracks()`, `count()`. Per frame:
+  1. Candidate (track, blob, distance) for every pair within `maxMatchDistance` (100 px at processing scale), sorted so the smallest distance is at the back
+  2. Greedy matching: pop from the back, accept if neither the track nor the blob is already used (`trackUsed`/`blobUsed`)
+  3. Matched: `prevCentroid = centroid`, new centroid, `hits++`, `missed = 0`. Unmatched tracks: `missed++`
+  4. Crossing: `counted == false`, `hits >= minHits` (3), and `(side(prev) >= 0) != (side(cur) >= 0)` -> `count_++`, `counted = true`. Only when `countingEnabled`
+  5. Unmatched blobs become new tracks (`id = nextId_++`, `prevCentroid = centroid` so there is no phantom crossing on the first frame)
+  6. Erase tracks with `missed >= maxMissed` (5), last, so no indices shift mid-update
+- `side()` is the cross product `(A-B) x (A-P)`, which equals `(B-A) x (P-A)`; only the sign is used
+- `main`: tracker built from the scaled count line, `update(keptBlobs, frame_count > warmupFrames)` after `nms` (`warmupFrames` = 120, above the measured 112), `Crossings: N` line in `render`, and the track overlay (filled circle plus ID text, colour by `counted`)
+- Committed as `f5e4bb6`. Not yet run on the full clip with the overlay watched by eye; no counts compared to anything yet
+
+What I learned
+- Bugs caught in review: uninitialized loop counters (`for (size_t i; ...)` is undefined behaviour), setting `blobUsed` while building candidates (it made every candidate fail the later check), crossing test written with `==` instead of `!=`, `>=` on one side and `>` on the other, `auto& it = remove_if(...)` (cannot bind a non-const reference to a temporary), and a `count` that was never declared as a member
+- A `cv::Point2f` cannot be null; `nullptr` is only for pointers. Keep "matched this frame" in a separate flag (`std::vector<bool>`) instead of blanking the centroid, or a missed track loses its last position
+- `std::vector<bool>(n, false)` sizes and zeroes it; it is a packed specialization, so `auto&` to an element does not give a real reference
+- New tracks must set `prevCentroid` to the centroid; the default `Point2f` is (0, 0) and would fake a crossing
+- Same-sign test: `(a >= 0) == (b >= 0)` handles an exact zero; `a * b > 0` does not (and can overflow in principle)
+- `c ? {0, 255, 0} : {1, 2, 3}` does not compile (a braced list has no type); write `cv::Scalar(...)` on both sides
+- `cv::putText` argument order: `img, text, org, fontFace, fontScale, color, thickness`
+- A getter is a `const` member function returning a private member; small types by value, big ones by `const&`
+- Members initialize in declaration order, not initializer-list order
+
+Open
+- Watch the overlay on `auckland-hwy` @0.5: IDs should stay on one vehicle, and a vehicle should turn green once when it crosses
+- Expect double counts from split vehicles (one vehicle, two blobs, two tracks); the Week 6 ground truth shows how much
+- The line is treated as infinite; fine only if the count line spans the road
+- A crossing seen while `hits < minHits` is lost (prev is overwritten before the track is confirmed)
+- A missed track keeps its old position, so a fast vehicle missed for several frames can respawn as a new track; the ring-buffer velocity would help
+- Print `count()` after the loop so headless runs report the result
+- Set a count line for `auckland-fwy`
+- `reports/week-05.md` (draft written, send Sun Oct 25)
