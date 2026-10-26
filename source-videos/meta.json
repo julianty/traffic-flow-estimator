@@ -269,6 +269,84 @@
           "date": null
         }
       }
+    },
+    "16th-st": {
+      "file": "16th-st-city-college.mp4",
+      "role": "unused",
+      "source_url": null,
+      "author": "Julian (own iPhone footage)",
+      "view": "birdseye",
+      "scene": "one-way city street, one moving lane between parked cars and a construction site",
+      "intersection": false,
+      "width": 1898,
+      "height": 1028,
+      "fps": 30.0,
+      "duration_s": 35.8,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 1.4,
+        "max_rotation_deg": 0.05
+      },
+      "notes": "From 16th-st-city-college.MOV (HEVC 10-bit HLG/Dolby Vision, 1080p59.94, drifted ~50 px vertically). Tone-mapped to SDR with ffmpeg scale_vt, 30 fps, then locked to frame 0 with scratch/stabilize.py and cropped by (12, 35) px. Traffic flows top-right -> bottom-left, ~7 px/frame; most of it is in frames ~0-500, then the street is empty. Trees on the left sway (small blobs). count_line is perpendicular to the lane axis (35 deg) through its middle (708, 605).",
+      "annotations": {
+        "count_line": [
+          [
+            282,
+            0
+          ],
+          [
+            1006,
+            1027
+          ]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "16th-st-2": {
+      "file": "16th-st-city-college-2.mp4",
+      "role": "unused",
+      "source_url": null,
+      "author": "Julian (own iPhone footage)",
+      "view": "birdseye",
+      "scene": "one-way city street, one moving lane between parked cars and a construction site; cross street at top right",
+      "intersection": false,
+      "width": 1900,
+      "height": 1016,
+      "fps": 30.0,
+      "duration_s": 39.5,
+      "codec": "h264",
+      "audio": false,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 1.5,
+        "max_rotation_deg": 0.07
+      },
+      "notes": "Same street as 16th-st, framed slightly differently. From 16th-st-city-college-2.MOV (HEVC 10-bit HLG, 1080p59.94, drifted -52..+9 px vertically). Tone-mapped to SDR with ffmpeg scale_vt, 30 fps, then locked to frame 0 with scratch/stabilize.py and cropped by (3, 54) px. Traffic flows top-right -> bottom-left; some vehicles turn in from the cross street at the top right. Traffic spread across the whole clip. Tall vehicles overlap the parked-car row (heatmap). count_line is perpendicular to the lane axis (38 deg) through (1037, 534), below where turning traffic joins.",
+      "annotations": {
+        "count_line": [
+          [
+            622,
+            0
+          ],
+          [
+            1411,
+            1015
+          ]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
     }
   }
 }
