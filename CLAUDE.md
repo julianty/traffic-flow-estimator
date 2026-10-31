@@ -67,8 +67,10 @@
 ## Data
 - Source: 6 Pexels clips downloaded by hand (Sep 30) into `source-videos/`. No trimming needed; all clips are 21–60 s. Two more `i5-*` clips (`i5-incoming` = `dev` role for BFS work) were added to `meta.json` Oct 9. Files use the Pexels ID filename (e.g. `16516296_1920_1080_25fps.mp4`), not the alias.
 - **`source-videos/meta.json` is the source of truth** for per-clip metadata (URL, resolution/fps, camera stability, role, and placeholders for count line, mask regions, ground truth). Refer to clips by their alias there.
-  - **Main:** `auckland-hwy` (16516296): 1080p25, 60 s, tripod-stable, dense traffic with some overlap
-  - **Validation:** `auckland-fwy` (16516297): 1080p25, 90 s, tripod-stable, same creator as main (also Auckland), different framing. Tune on main, then check here without re-tuning.
+  - **Main (since Oct 31):** `ucsd-i5-incoming` (`ucsd-i5-incoming-stabilized-boosted.mp4`): Julian's own footage from an I-5 overpass near UCSD (shot Oct 30), stabilized + contrast-boosted in DaVinci Resolve. 1080p60, 57 s, 4 lanes toward the camera, ~76 crossings after frame 120. Count line y = 550. Stabilization drifts slowly (top/right ~30-40 px by the end; MOG2 absorbs it); a camera-attached occluder on the right edge makes small blobs. Warm-up ~69 frames
+  - **Validation (since Oct 31):** `ucsd-i5-outgoing`: same spot, opposite direction, 1080p60, 81 s, 5 lanes going away, ~100 crossings. Count line y = 750. Whole frame creeps ~20 px right over the clip; large occluder on the right edge. Warm-up ~65 frames. Tune on main, then check here without re-tuning.
+  - **60 fps caveat:** tracker constants counted in frames (`maxMissed` 5, `warmupFrames` 120) cover less than half the time they did on the 25 fps Auckland clips
+  - Former main/validation (until Oct 31, all Week 2-5 tuning was done on these): `auckland-hwy` (16516296): 1080p25, 60 s, tripod-stable, dense traffic with some overlap; `auckland-fwy` (16516297): 1080p25, 90 s, same creator, different framing. Now `unused` in `meta.json`.
   - **Backup:** `urban-road` (14350696): 4K60, 37 s, tripod-stable, sparse traffic (easy case). Downscale before processing.
   - Unused: `birdseye-4way` (drone drift/rotation), `motorway-vertical` (portrait, mild drift). Excluded: `skyline-hwy` (moving camera).
 - License: Pexels License. Free to use and modify, no attribution required, but no redistributing unaltered copies. Raw `.mp4`s stay out of git (`*.mp4` in `.gitignore`); `meta.json` is tracked.

@@ -21,15 +21,15 @@
   },
   "downloaded": "2026-09-30",
   "roles": {
-    "main": "auckland-hwy",
-    "validation": "auckland-fwy",
+    "main": "ucsd-i5-incoming",
+    "validation": "ucsd-i5-outgoing",
     "backup": "urban-road",
     "dev": "i5-incoming"
   },
   "clips": {
     "auckland-hwy": {
       "file": "16516296_1920_1080_25fps.mp4",
-      "role": "main",
+      "role": "unused",
       "source_url": "https://www.pexels.com/video/busy-auckland-highway-traffic-scene-38854021/",
       "author": "Kiwi and Camera",
       "view": "traffic cam",
@@ -46,7 +46,7 @@
         "max_shift_px": 1,
         "max_rotation_deg": 0.02
       },
-      "notes": "Tripod, dense traffic, close/telephoto view: expect overlapping vehicles (merged blobs). Left lane is clipped near top of the video",
+      "notes": "Main clip until 2026-10-31 (all Week 2-5 tuning was done on it). Tripod, dense traffic, close/telephoto view: expect overlapping vehicles (merged blobs). Left lane is clipped near top of the video",
       "annotations": {
         "count_line": [
           [0, 200],
@@ -62,7 +62,7 @@
     },
     "auckland-fwy": {
       "file": "16516297_1920_1080_25fps.mp4",
-      "role": "validation",
+      "role": "unused",
       "source_url": "https://www.pexels.com/video/busy-freeway-traffic-in-auckland-38854018/",
       "author": "Kiwi and Camera",
       "view": "traffic cam",
@@ -79,7 +79,7 @@
         "max_shift_px": 2,
         "max_rotation_deg": 0.04
       },
-      "notes": "Same creator as auckland-hwy (also Auckland), but framed differently (not the same camera position), so it needs its own count_line.",
+      "notes": "Validation clip until 2026-10-31. Same creator as auckland-hwy (also Auckland), but framed differently (not the same camera position), so it needs its own count_line.",
       "annotations": {
         "count_line": null,
         "mask_regions": [],
@@ -339,6 +339,72 @@
             1411,
             1015
           ]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "ucsd-i5-incoming": {
+      "file": "ucsd-i5-incoming-stabilized-boosted.mp4",
+      "role": "main",
+      "source_url": null,
+      "author": "Julian (own footage, shot 2026-10-30)",
+      "view": "traffic cam",
+      "scene": "highway (I-5 overpass near UCSD), 4 lanes plus shoulders toward the camera",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.0,
+      "duration_s": 57.1,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "marginal",
+        "max_shift_px": 40,
+        "max_rotation_deg": null
+      },
+      "notes": "Stabilized and contrast-boosted in DaVinci Resolve, 3426 frames, 23 Mbps. Not measured with the ORB method: landmark template matching (2026-10-31) shows the lower left is steady (<= 11 px over the clip) but the top/right drifts slowly, ~30-40 px by the end (rotation/scale drift, not a shift). Slow enough that MOG2 at rate 0.003 absorbs it (fg pixels don't grow over the clip). A dark camera-attached occluder on the right edge (x > ~1750, y ~300-850) moves in the stabilized frame and makes small blobs there; the opposite carriageway (top right) has traffic going the other way, kept above y ~460. Warm-up (warmup_check @0.5): settles at frame 54 -> 69. Traffic is heavy for the first ~40 s, then thins out; ~76 vehicles cross the count line after frame 120 (tracker, unverified). count_line y = 550 sits between the far-road noise and the occluder noise and spans both shoulders; y = 550 and 650 both gave 76 on-road crossings and none off-road, while 450/750/950 picked up far-road, occluder or hillside crossings. 60 fps: tracker constants counted in frames (maxMissed, warmupFrames) cover half the time they do at 25-30 fps.",
+      "annotations": {
+        "count_line": [
+          [430, 550],
+          [1540, 550]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "ucsd-i5-outgoing": {
+      "file": "ucsd-i5-outgoing-stabilized-boosted.mp4",
+      "role": "validation",
+      "source_url": null,
+      "author": "Julian (own footage, shot 2026-10-30)",
+      "view": "traffic cam",
+      "scene": "highway (I-5 overpass near UCSD, same spot as ucsd-i5-incoming), 5 lanes plus shoulder going away from the camera",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.0,
+      "duration_s": 81.3,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "marginal",
+        "max_shift_px": 21,
+        "max_rotation_deg": null
+      },
+      "notes": "Opposite direction of ucsd-i5-incoming, same session. Stabilized and contrast-boosted in DaVinci Resolve, 4878 frames, 11 Mbps. Landmark template matching (2026-10-31; not the ORB method): the whole frame creeps right by ~1 px per 100 frames, 12 px by frame 1200 and 17-21 px by the end; landmarks agree to within a few px, so it is mostly a shift. MOG2 at rate 0.003 absorbs it (fg pixels follow traffic, no growth). A large blurry dark occluder covers the right edge (x > ~1650) and makes small blobs at y ~40-680; the opposite carriageway (top left) has traffic down to y ~450 at the left edge. Traffic enters at the bottom and leaves at the top. Warm-up (warmup_check @0.5): settles at frame 50 -> 65. ~100 vehicles cross the count line after frame 120 (tracker, unverified). count_line y = 750 is below the occluder noise and the opposite traffic and spans the left shoulder to the right shoulder; 750 and 850 gave 100 on-road crossings and none off-road, 550/650 gave 98, 450 picked up 2 occluder crossings and 950 picked up 4 at the left edge.",
+      "annotations": {
+        "count_line": [
+          [200, 750],
+          [1660, 750]
         ],
         "mask_regions": [],
         "ground_truth": {
