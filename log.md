@@ -492,6 +492,16 @@ Open
 - Whether MOG2 mislabels some shadows as foreground (not checked)
 - `reports/week-04.md` drafted; send Sun Oct 18. Confirm week-03 was sent
 
+### 10-21-26 (Week 5: Week 4 leftovers closed, warm-up measured, first count line):
+
+Entry added Oct 31 from the commits and CLAUDE.md; no log was written on the day.
+
+- `scratch/warmup_check.cpp` (written by Claude, `3d650fb`): runs the `main` pipeline for 300 frames and finds where the fg-pixel and blob counts settle (baseline = median of frames 150-300; settled = first frame that stays <= 1.5x baseline for 30 frames). `auckland-hwy` settles at 97, `auckland-fwy` at 70; plus a 15-frame margin -> ~112. Julian judged this enough
+- `warmupFrames` = 120 in `main.cpp` (`2c39e00`, Julian)
+- NMS metric decided: keep plain IoU + the area filter; intersection-over-smaller rejected as non-standard (`efe11e5`)
+- Count line drawn in the render path (`e88906d`) and `auckland-hwy` count line set to y = 200 in `meta.json` (`e791550`), both Julian
+- `scratch/frame_grid.cpp` (written by Sonnet, `5cd7968`): one full-res frame with a pixel grid, for reading count-line coordinates
+
 ### 10-24-26 (Week 5: count line loaded from `meta.json`):
 
 Julian wrote `src/meta.*` and the `main` wiring; Claude built and ran the checks.
@@ -500,7 +510,7 @@ Julian wrote `src/meta.*` and the `main` wiring; Claude built and ran the checks
 - `main` scales the loaded count line by `flags.scale`; `render` draws it on both the frame and the mask panel (replaces the hardcoded `pointA`/`pointB`)
 - Makefile: `MAIN_SRCS`/`MAIN_HDRS` variables, `meta.cpp`/`meta.hpp` added
 - Checked: `make` clean; headless `auckland-hwy` @0.5 = 1500 frames, 17.4 s (~11.6 ms/frame, no slowdown); `auckland-fwy` -> "Count line not defined in meta.json" (no line set yet); a copy of the clip under another filename -> "Clip other.mp4 not found in meta.json". Not tested: the width/height mismatch error
-- Not yet committed. `hwy_f200.png` in the repo root is a stray screenshot
+- Not yet committed (later the same day as `7afa1f8`). `hwy_f200.png` in the repo root is a stray screenshot (gone by Oct 31)
 
 Open
 - Commit the metadata change (new commit, Julian's code, no Claude co-author line)
@@ -542,3 +552,40 @@ Open
 - Print `count()` after the loop so headless runs report the result
 - Set a count line for `auckland-fwy`
 - `reports/week-05.md` (draft written, send Sun Oct 25)
+
+Later (not logged on the day): `f5e4bb6` also raised `blobAreaThreshold` in `main.cpp` from 100 to 200. `mog2_tune` and `warmup_check` still use 100.
+
+### 10-26-26 (Week 6: own city-street footage, `stabilize.py`):
+
+Entry added Oct 31 from commit `003d487` and `meta.json`.
+
+- Two own iPhone clips of 16th St (`16th-st`, `16th-st-2`): one-way street, one moving lane, 1080p59.94 HEVC HLG tone-mapped to SDR at 30 fps. Both drifted ~50 px vertically
+- `scratch/stabilize.py` (written by Claude): locks every frame to one reference frame (ORB at half res, RANSAC similarity transform, crop to the region valid in every frame). After it: 1.4 / 1.5 px max shift
+- Count lines set perpendicular to the lane axis; role `unused`
+
+### 10-31-26 (Week 6: main/validation switched to own I-5 footage):
+
+Claude checked the clips, picked the count lines and made the GIFs; no pipeline code changed.
+
+- New clips, shot Oct 30 from an I-5 overpass near UCSD, stabilized and contrast-boosted in DaVinci Resolve, 1080p60:
+  - `ucsd-i5-incoming` (57 s, 4 lanes toward the camera) -> **main**
+  - `ucsd-i5-outgoing` (81 s, 5 lanes going away) -> **validation**
+  - `auckland-hwy` / `auckland-fwy` -> `unused` (all Week 2-5 tuning was done on them)
+- Stability, by matching 8 fixed landmark patches against frame 1 (whole-frame phase correlation was useless with moving cars):
+  - incoming: the lower left stays within 11 px, but the top/right drifts 30-40 px by the end, so it rotates/scales
+  - outgoing: the whole frame creeps right, 12 px by frame 1200 and ~20 px at the end
+  - On both, the fg pixel count follows traffic and doesn't grow, so MOG2 at 0.003 keeps up with the drift
+- Both clips have a dark camera-attached occluder on the right edge that makes small blobs, and the opposite carriageway is in view
+- Warm-up (`warmup_check` @0.5): incoming 54 -> 69 frames, outgoing 50 -> 65, so `warmupFrames` = 120 covers both
+- Count lines: the tracker treats the line as infinite, so every blob that crosses that y counts, on the road or not. Ran the full pipeline + tracker with horizontal lines at y = 450-950 and kept one with no off-road crossings:
+  - incoming y = 550: 76 crossings after frame 120. 450 picked up the opposite carriageway, 750 the occluder, 950 the hillside
+  - outgoing y = 750: 100 crossings. 450 picked up the occluder, 950 the left edge; 550/650 gave 98
+  - Neither count has been checked against a manual count
+- `make_demo` committed (`2b72449`); metadata switch `f2df932`
+- Checkpoint GIFs: `assets/Week 6 Checkpoint - ucsd-i5-{incoming,outgoing}.gif` (frames 121-720, 10 s real time)
+- Visible in the incoming GIF: a big box at the top-right corner (occluder meets the opposite carriageway) and a thin streak along the far road edge in the mask (drift). Neither is near y = 550
+
+Open
+- 60 fps: `maxMissed` = 5 frames is 83 ms now (200 ms at 25 fps). Watch for tracks that drop and come back with a new ID
+- MOG2 rate, kernels and the area filter were tuned on `auckland-hwy` at 25 fps; recheck on the new main clip
+- Print `count()` in headless mode; manual ground truth on `ucsd-i5-incoming` (frames > 120, y = 550); `reports/week-06.md`

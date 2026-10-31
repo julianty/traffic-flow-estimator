@@ -71,11 +71,13 @@ A small window saying "it works" should appear. Press any key to close it.
 
 ```sh
 make                                     # builds build/main.exe
-build/main.exe --video_path source-videos/16516296_1920_1080_25fps.mp4 --scale 0.5
+build/main.exe --video_path source-videos/ucsd-i5-incoming-stabilized-boosted.mp4 --scale 0.5
 ```
 
+- The clip needs an entry with a `count_line` in `source-videos/meta.json` (matched by file name).
 - `--scale <s>` (`0 < s <= 1`) downscales frames before processing. At 1.0, the side-by-side display is 3840 px wide, so use 0.5 when watching interactively.
 - `--headless` skips all display, for timing runs.
+- `--kneighbors <4|8>` picks the blob-labeling connectivity (default 4).
 - While the window is open: space pauses and resumes; `q`/Esc quits.
 - The `.exe` suffix is kept on macOS too, so targets and commands match on both platforms.
 
@@ -88,9 +90,9 @@ build/main.exe --video_path source-videos/16516296_1920_1080_25fps.mp4 --scale 0
 
 ## Data
 
-Source footage is fixed-camera traffic video from [Pexels](https://www.pexels.com/), downloaded by hand. Each clip was checked for camera motion, since background subtraction needs a static camera. Per-clip metadata (source URL, resolution/fps, stability, role) lives in `source-videos/meta.json`: the main clip is `auckland-hwy`, the validation clip is `auckland-fwy`, and the backup is `urban-road`.
+Source footage is fixed-camera traffic video: the author's own recordings from an I-5 overpass and a city street, plus clips from [Pexels](https://www.pexels.com/) downloaded by hand. Each clip was checked for camera motion, since background subtraction needs a static camera; the own recordings were stabilized in software first. Per-clip metadata (source, resolution/fps, stability, role, count line) lives in `source-videos/meta.json`: the main clip is `ucsd-i5-incoming`, the validation clip is `ucsd-i5-outgoing` (same overpass, opposite direction), and the backup is `urban-road`. Until Oct 31 the main and validation clips were the Pexels clips `auckland-hwy` and `auckland-fwy`.
 
-Clips are used under the [Pexels License](https://www.pexels.com/license/) (free to use and modify, no attribution required, no redistributing unaltered copies), so the raw video is not checked into this repo (see `.gitignore`).
+Pexels clips are used under the [Pexels License](https://www.pexels.com/license/) (free to use and modify, no attribution required, no redistributing unaltered copies). No raw video is checked into this repo (see `.gitignore`).
 
 ## Benchmark
 

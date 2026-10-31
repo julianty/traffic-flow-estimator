@@ -6,13 +6,13 @@
     "scene": "free text, e.g. highway, 4-way intersection",
     "source_url": "Pexels page the file was downloaded from (Pexels page IDs can differ from the file-name ID)",
     "width/height/fps/duration_s/codec/audio": "measured with ffprobe on the actual file (not taken from the file name)",
-    "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit); max_shift_px in full-res pixels. stable = a few px or less. Clips marked softwarestab were stabilized in DaVinci Resolve first; stability describes the stabilized file",
+    "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit; the ucsd-i5-* clips used landmark template matching instead, see their notes); max_shift_px in full-res pixels. stable = a few px or less. Clips marked softwarestab were stabilized in DaVinci Resolve first; stability describes the stabilized file",
     "annotations.count_line": "line-crossing geometry, e.g. [[x1,y1],[x2,y2]] in full-res pixels; null until designed",
     "annotations.mask_regions": "polygons to ignore (overlays, trees); empty until needed",
     "annotations.ground_truth": "manual vehicle count for benchmarking; null until counted",
-    "author": "Pexels creator (attribution optional under the license); null if not recorded"
+    "author": "Pexels creator (attribution optional under the license), or Julian for own footage; null if not recorded"
   },
-  "source": "Pexels",
+  "source": "Pexels (6 clips) plus Julian's own footage (i5-*, 16th-st*, ucsd-i5-*)",
   "license": {
     "name": "Pexels License",
     "url": "https://www.pexels.com/license/",
