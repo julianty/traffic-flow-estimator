@@ -32,6 +32,12 @@ build/warmup_check.exe: scratch/warmup_check.cpp src/ccl.cpp src/ccl.hpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
 
+DEMO_SRCS := src/ccl.cpp src/nms.cpp src/heap.cpp src/meta.cpp src/tracker.cpp
+
+build/make_demo.exe: scratch/make_demo.cpp $(DEMO_SRCS) $(MAIN_HDRS)
+	@mkdir -p build
+	g++ -std=c++17 -g $< $(DEMO_SRCS) -o $@ $(shell pkg-config --cflags --libs opencv5)
+
 build/frame_grid.exe: scratch/frame_grid.cpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< -o $@ $(shell pkg-config --cflags --libs opencv5)
