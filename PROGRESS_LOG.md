@@ -91,3 +91,28 @@
 **Behind schedule?** No on the milestones. Small items are late: the Week 4 report (due Oct 18), the warm-up measurement (Week 2), and the NMS metric decision. Catch-up: before starting the tracker, spend one session doing three things — finalize and send `week-04.md`, run `main` on `auckland-hwy` while logging fg-pixel count per frame for frames 60–100 to fix N, and pick the NMS metric (if nested fragments are what the tracker will choke on, try intersection-over-smaller and update `nms_check.cpp`'s expected values). Then commit the pending CLAUDE.md roadmap changes so the Week 7–9 plan in git matches the one you're working from.
 
 **Next week:** Week 5 (Oct 20–26) — naive centroid tracking + line-crossing counting → first end-to-end counts. The count-line geometry is still undesigned (`meta.json` → `annotations.count_line`), so define it first; tracks should tolerate a few missed frames because blobs near the area threshold flicker.
+
+## 2026-10-26 — Week 5 (Oct 20–26): Naive centroid tracking + line-crossing counting → first end-to-end counts
+**Status:** On track — the tracker and line-crossing counter are written and running in `main`, so the pipeline produces a crossing count end to end. But that count has never been checked against anything, and that check is all of Week 6.
+
+**Changes this week:** (11 commits, Oct 21–24, all on `main`; `main` is level with `origin/main`)
+- Week 4 leftovers closed: `scratch/warmup_check.cpp` measures MOG2 settling (`auckland-hwy` 97 → 112 frames, `auckland-fwy` 70 → 85) (`3d650fb`). NMS metric decision recorded: keep plain IoU + the area filter (`efe11e5`)
+- `warmupFrames` constant in `main.cpp` (`2c39e00`). Count line drawn in the render path (`e88906d`), `auckland-hwy` count line set to y = 200 in `meta.json` (`e791550`)
+- `scratch/frame_grid.cpp` helper, written by Sonnet (`5cd7968`)
+- `src/meta.*`: `loadClipMeta()` reads the clip's count line from `meta.json` by file basename, and `main` scales it by `--scale` (`7afa1f8`)
+- `src/tracker.*`: greedy nearest-first centroid matching (100 px gate), 3 hits to confirm a track, dropped after 5 misses, counts once per track on a side change, counting only after warm-up. `Crossings: N` and a track overlay (ID + dot) added to `render` (`f5e4bb6`). The same commit raised `blobAreaThreshold` from 100 to 200, but CLAUDE.md's Code layout still says 100
+- Log, CLAUDE.md and `reports/week-05.md` draft (`af02359`, `a2d68c6`, `2e9fde6`)
+- **Uncommitted (staged):** `scratch/make_demo.cpp`, which records the overlay to an .mp4 (frames 121–400 by default; outputs `build/demo.mp4`/`.gif` already exist), plus its `make_demo` Makefile rule. The staged Makefile diff shows all 37 lines rewritten because the line endings changed to CRLF. The real change is only the new 5-line rule
+
+**Roadmap progress:**
+- Week 5 naive centroid tracking: done (`f5e4bb6`, written by Julian)
+- Week 5 line-crossing counting: done for `auckland-hwy` (`7afa1f8`, `f5e4bb6`)
+- Week 5 first end-to-end counts: partial. The count is computed but only shown on screen in interactive mode. The headless run prints only the timings (`main.cpp` ~L281), so no count has been recorded yet. The demo recorder suggests the overlay has been watched, but the logs don't say whether IDs stayed stable or vehicles were counted once
+- Week 5 `auckland-fwy` count line: not started (`count_line` is still `null`), so the validation clip can't go through the tracker yet
+- Week 5 `reports/week-05.md`: partial. It still says "Update this before sending on Sunday", and Sun Oct 25 has passed
+- Earlier weeks: nothing outstanding. The Week 2 warm-up measurement and the Week 4 NMS metric decision were closed this week
+- CLAUDE.md Scope checklist: BFS CCL and heap NMS are still `[ ]`, although both have been implemented and tested since Week 4
+
+**Behind schedule?** No. The small late items are the headless count printout, the `auckland-fwy` count line and the Week 5 report. Catch-up: before starting the ground truth, spend about 30 minutes adding `std::cout << "Crossings: " << crossingTracker.count()` after the loop. Then run headless `auckland-hwy` @0.5 to get the first number and put it in `week-05.md` before sending. Week 6 compares against that number, so it has to exist first.
+
+**Next week:** Week 6 (Oct 27–Nov 2): manual ground-truth count on `auckland-hwy` (post-warm-up frames only, frame > 120, same y = 200 line), then measure accuracy and sort the errors into misses, double-counts (split vehicles) and merges (occlusion). Use `build/demo.mp4` to tag each error. Commit `make_demo` first, and consider normalizing the Makefile's line endings back to LF in the same commit.
