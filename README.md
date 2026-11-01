@@ -71,7 +71,7 @@ A small window saying "it works" should appear. Press any key to close it.
 
 ```sh
 make                                     # builds build/main.exe
-build/main.exe --video_path source-videos/ucsd-i5-incoming-stabilized-boosted.mp4 --scale 0.5
+build/main.exe --video_path source-videos/ucsd-i5-incoming-stabilized-boosted-dslr.mp4 --scale 0.5
 ```
 
 - The clip needs an entry with a `count_line` in `source-videos/meta.json` (matched by file name).
@@ -90,7 +90,7 @@ build/main.exe --video_path source-videos/ucsd-i5-incoming-stabilized-boosted.mp
 
 ## Data
 
-Source footage is fixed-camera traffic video: the author's own recordings from an I-5 overpass and a city street, plus clips from [Pexels](https://www.pexels.com/) downloaded by hand. Each clip was checked for camera motion, since background subtraction needs a static camera; the own recordings were stabilized in software first. Per-clip metadata (source, resolution/fps, stability, role, count line) lives in `source-videos/meta.json`: the main clip is `ucsd-i5-incoming`, the validation clip is `ucsd-i5-outgoing` (same overpass, opposite direction), and the backup is `urban-road`. Until Oct 31 the main and validation clips were the Pexels clips `auckland-hwy` and `auckland-fwy`.
+Source footage is fixed-camera traffic video: the author's own recordings from an I-5 overpass and a city street, plus clips from [Pexels](https://www.pexels.com/) downloaded by hand. Each clip was checked for camera motion, since background subtraction needs a static camera; the own recordings were stabilized in software first. Per-clip metadata (source, resolution/fps, stability, role, count line) lives in `source-videos/meta.json`: the main clip is `ucsd-i5-incoming-dslr`, the validation clips are `ucsd-i5-incoming-dslr2`, `ucsd-i5-incoming` and `ucsd-i5-outgoing` (all shot the same day from the same overpass; the last one faces the opposite direction), and the backup is `urban-road`. Until Oct 31 the main and validation clips were the Pexels clips `auckland-hwy` and `auckland-fwy`.
 
 Pexels clips are used under the [Pexels License](https://www.pexels.com/license/) (free to use and modify, no attribution required, no redistributing unaltered copies). No raw video is checked into this repo (see `.gitignore`).
 

@@ -589,3 +589,21 @@ Open
 - 60 fps: `maxMissed` = 5 frames is 83 ms now (200 ms at 25 fps). Watch for tracks that drop and come back with a new ID
 - MOG2 rate, kernels and the area filter were tuned on `auckland-hwy` at 25 fps; recheck on the new main clip
 - Print `count()` in headless mode; manual ground truth on `ucsd-i5-incoming` (frames > 120, y = 550); `reports/week-06.md`
+
+### 11-1-26 (Week 6: main switched to the DSLR take):
+
+Claude checked the clips and picked the count lines; no pipeline code changed.
+
+- Two more clips from the same Oct 30 session, same overpass and direction as `ucsd-i5-incoming`, but shot on a DSLR (stabilized + boosted in DaVinci Resolve, 1080p60, 49.5 s / 2972 frames each, tighter framing: the 4 lanes fill the frame, no right-edge occluder, opposite carriageway only in the top-right corner):
+  - `ucsd-i5-incoming-dslr` -> **main**
+  - `ucsd-i5-incoming-dslr2` (different traffic; an out-of-focus fence in front of the lens puts a static dark pattern over the frame) -> **validation**
+  - `ucsd-i5-incoming` and `ucsd-i5-outgoing` -> both **validation** (`roles.validation` in `meta.json` is now a list)
+- Stability (landmark matching): `-dslr` <= 2 px, `-dslr2` <= 6 px, far steadier than the phone clips (20-40 px)
+- Warm-up (`warmup_check` @0.5, area 100): `-dslr` 1 -> 16 frames, `-dslr2` 19 -> 34
+- Count lines, same survey as Oct 31 (lines y = 300-900, crossings after frame 120):
+  - `-dslr`: 71-76 on every line; 600 and 700 each picked up one left-shoulder crossing. Chose y = 400 (73)
+  - `-dslr2`: 63-67; only 900 picked up an off-road crossing. y = 400 too (66)
+  - Neither count has been checked against a manual count
+
+Open
+- Manual ground truth now on `ucsd-i5-incoming-dslr` (frames > 120, y = 400)

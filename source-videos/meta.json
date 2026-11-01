@@ -1,7 +1,7 @@
 {
   "_about": "Metadata for clips in source-videos/. Keys under 'clips' are short aliases for referring to a clip in code, notes, and the write-up. Raw .mp4 files are gitignored; this file is tracked.",
   "_fields": {
-    "role": "main | validation | backup | dev | unused | excluded. validation = held-out clip similar to main; tune parameters on main, then check they still work here without re-tuning. dev = clean-mask clip for developing/debugging an algorithm (BFS) before moving to main",
+    "role": "main | validation | backup | dev | unused | excluded. validation = held-out clip similar to main (roles.validation may list several); tune parameters on main, then check they still work here without re-tuning. dev = clean-mask clip for developing/debugging an algorithm (BFS) before moving to main",
     "view": "birdseye | traffic cam | dashcam",
     "scene": "free text, e.g. highway, 4-way intersection",
     "source_url": "Pexels page the file was downloaded from (Pexels page IDs can differ from the file-name ID)",
@@ -21,8 +21,12 @@
   },
   "downloaded": "2026-09-30",
   "roles": {
-    "main": "ucsd-i5-incoming",
-    "validation": "ucsd-i5-outgoing",
+    "main": "ucsd-i5-incoming-dslr",
+    "validation": [
+      "ucsd-i5-incoming",
+      "ucsd-i5-outgoing",
+      "ucsd-i5-incoming-dslr2"
+    ],
     "backup": "urban-road",
     "dev": "i5-incoming"
   },
@@ -350,7 +354,7 @@
     },
     "ucsd-i5-incoming": {
       "file": "ucsd-i5-incoming-stabilized-boosted.mp4",
-      "role": "main",
+      "role": "validation",
       "source_url": null,
       "author": "Julian (own footage, shot 2026-10-30)",
       "view": "traffic cam",
@@ -367,7 +371,7 @@
         "max_shift_px": 40,
         "max_rotation_deg": null
       },
-      "notes": "Stabilized and contrast-boosted in DaVinci Resolve, 3426 frames, 23 Mbps. Not measured with the ORB method: landmark template matching (2026-10-31) shows the lower left is steady (<= 11 px over the clip) but the top/right drifts slowly, ~30-40 px by the end (rotation/scale drift, not a shift). Slow enough that MOG2 at rate 0.003 absorbs it (fg pixels don't grow over the clip). A dark camera-attached occluder on the right edge (x > ~1750, y ~300-850) moves in the stabilized frame and makes small blobs there; the opposite carriageway (top right) has traffic going the other way, kept above y ~460. Warm-up (warmup_check @0.5): settles at frame 54 -> 69. Traffic is heavy for the first ~40 s, then thins out; ~76 vehicles cross the count line after frame 120 (tracker, unverified). count_line y = 550 sits between the far-road noise and the occluder noise and spans both shoulders; y = 550 and 650 both gave 76 on-road crossings and none off-road, while 450/750/950 picked up far-road, occluder or hillside crossings. 60 fps: tracker constants counted in frames (maxMissed, warmupFrames) cover half the time they do at 25-30 fps.",
+      "notes": "Main clip 2026-10-31 to 2026-11-01, then validation (replaced by the steadier DSLR take ucsd-i5-incoming-dslr). Phone footage. Stabilized and contrast-boosted in DaVinci Resolve, 3426 frames, 23 Mbps. Not measured with the ORB method: landmark template matching (2026-10-31) shows the lower left is steady (<= 11 px over the clip) but the top/right drifts slowly, ~30-40 px by the end (rotation/scale drift, not a shift). Slow enough that MOG2 at rate 0.003 absorbs it (fg pixels don't grow over the clip). A dark camera-attached occluder on the right edge (x > ~1750, y ~300-850) moves in the stabilized frame and makes small blobs there; the opposite carriageway (top right) has traffic going the other way, kept above y ~460. Warm-up (warmup_check @0.5): settles at frame 54 -> 69. Traffic is heavy for the first ~40 s, then thins out; ~76 vehicles cross the count line after frame 120 (tracker, unverified). count_line y = 550 sits between the far-road noise and the occluder noise and spans both shoulders; y = 550 and 650 both gave 76 on-road crossings and none off-road, while 450/750/950 picked up far-road, occluder or hillside crossings. 60 fps: tracker constants counted in frames (maxMissed, warmupFrames) cover half the time they do at 25-30 fps.",
       "annotations": {
         "count_line": [
           [430, 550],
@@ -405,6 +409,84 @@
         "count_line": [
           [200, 750],
           [1660, 750]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "ucsd-i5-incoming-dslr": {
+      "file": "ucsd-i5-incoming-stabilized-boosted-dslr.mp4",
+      "role": "main",
+      "source_url": null,
+      "author": "Julian (own footage, DSLR, shot 2026-10-30)",
+      "view": "traffic cam",
+      "scene": "highway (I-5 overpass near UCSD), 4 lanes toward the camera",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.0,
+      "duration_s": 49.5,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 2,
+        "max_rotation_deg": null
+      },
+      "notes": "Same I-5 overpass and direction as ucsd-i5-incoming, but shot on a DSLR instead of a phone the same day (2026-10-30), stabilized and contrast-boosted in DaVinci Resolve. Tighter framing: the 4 incoming lanes fill the frame, the opposite carriageway only shows in the top-right corner (y < ~200), no right-edge occluder. 2972 frames. Landmark template matching (2026-11-01): <= 2 px over the clip. Warm-up (warmup_check @0.5, area 100): settles at frame 1 -> 16. Some foreground specks on the left shoulder/hillside around y ~500-740. count_line y = 400 (tracker survey of y = 300-900: 71-76 crossings after frame 120 on every line, unverified); y = 600 and 700 each picked up one off-road crossing on the left shoulder, 400 and 800 none. y = 400 is below the opposite carriageway and above the shoulder noise, and gives tracks time to confirm (traffic enters at the top). 73 crossings at y = 400.",
+      "annotations": {
+        "count_line": [
+          [
+            430,
+            400
+          ],
+          [
+            1530,
+            400
+          ]
+        ],
+        "mask_regions": [],
+        "ground_truth": {
+          "count": null,
+          "counted_by": null,
+          "date": null
+        }
+      }
+    },
+    "ucsd-i5-incoming-dslr2": {
+      "file": "ucsd-i5-incoming-stabilized-boosted-dslr2.mp4",
+      "role": "validation",
+      "source_url": null,
+      "author": "Julian (own footage, DSLR, shot 2026-10-30)",
+      "view": "traffic cam",
+      "scene": "highway (I-5 overpass near UCSD), 4 lanes toward the camera",
+      "intersection": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.0,
+      "duration_s": 49.5,
+      "codec": "h264",
+      "audio": true,
+      "stability": {
+        "verdict": "stable",
+        "max_shift_px": 6,
+        "max_rotation_deg": null
+      },
+      "notes": "Same I-5 overpass and direction as ucsd-i5-incoming, but shot on a DSLR instead of a phone the same day (2026-10-30), stabilized and contrast-boosted in DaVinci Resolve. Tighter framing: the 4 incoming lanes fill the frame, the opposite carriageway only shows in the top-right corner (y < ~200), no right-edge occluder. 2972 frames. Second DSLR take, different traffic. An out-of-focus fence in front of the lens casts a static blotchy dark pattern over the whole frame (static, so MOG2 learns it). Landmark template matching (2026-11-01): <= 6 px over the clip (slow creep, ~(-3, 4) px by the end). Warm-up (warmup_check @0.5, area 100): settles at frame 19 -> 34. count_line y = 400, same as ucsd-i5-incoming-dslr (tracker survey of y = 300-900: 63-67 crossings after frame 120, unverified; only y = 900 picked up an off-road crossing). 66 crossings at y = 400.",
+      "annotations": {
+        "count_line": [
+          [
+            430,
+            400
+          ],
+          [
+            1530,
+            400
+          ]
         ],
         "mask_regions": [],
         "ground_truth": {
