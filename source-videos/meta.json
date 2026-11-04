@@ -9,7 +9,7 @@
     "stability": "camera motion vs. first frame, sampled every 2 s (ORB features + RANSAC similarity fit; the ucsd-i5-* clips used landmark template matching instead, see their notes); max_shift_px in full-res pixels. stable = a few px or less. Clips marked softwarestab were stabilized in DaVinci Resolve first; stability describes the stabilized file",
     "annotations.count_line": "line-crossing geometry, e.g. [[x1,y1],[x2,y2]] in full-res pixels; null until designed",
     "annotations.mask_regions": "polygons to ignore (overlays, trees); empty until needed",
-    "annotations.ground_truth": "manual vehicle count for benchmarking; null until counted",
+    "annotations.ground_truth": "manual vehicle count for benchmarking; all fields null until counted. file = per-crossing CSV (repo-relative, ground-truth/<alias>.csv; one row per vehicle, columns clip,frame,lane,type,notes; counting rules in CLAUDE.md); count = rows in that file (crossings after frame 120); counted_by / date = who counted and when",
     "author": "Pexels creator (attribution optional under the license), or Julian for own footage; null if not recorded"
   },
   "source": "Pexels (6 clips) plus Julian's own footage (i5-*, 16th-st*, ucsd-i5-*)",
@@ -58,6 +58,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -88,6 +89,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -118,6 +120,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -148,6 +151,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -178,6 +182,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -208,6 +213,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -238,6 +244,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -268,6 +275,7 @@
         "count_line": null,
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -307,6 +315,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -346,6 +355,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -379,6 +389,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -412,6 +423,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
@@ -451,9 +463,10 @@
         ],
         "mask_regions": [],
         "ground_truth": {
-          "count": null,
-          "counted_by": null,
-          "date": null
+          "file": "ground-truth/ucsd-i5-incoming-dslr.csv",
+          "count": 70,
+          "counted_by": "Julian",
+          "date": "2026-11-04"
         }
       }
     },
@@ -490,6 +503,7 @@
         ],
         "mask_regions": [],
         "ground_truth": {
+          "file": null,
           "count": null,
           "counted_by": null,
           "date": null
