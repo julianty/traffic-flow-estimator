@@ -53,6 +53,9 @@ InputFlags argParse(int argc, char* argv[]) {
                 throw std::runtime_error("--kneighbors expects either 4 or 8, got " + neighbors);
             }
             flags.kneighbors = kn == 4 ? Neighbors::Four : Neighbors::Eight;
+        } else if (arg == "--event_out") {
+            std::string event_out_path = getNextArg(argc, argv, i, "event_out");
+            flags.event_out = event_out_path;
         } else {
             // Unknown argument
             throw std::runtime_error("Unknown argument: " + arg);
@@ -71,5 +74,6 @@ void printUsage(const char* prog) {
         << "  --video_path <file>  video to process (required)\n"
         << "  --headless           no window or key controls; for benchmarks\n"
         << "  --scale <s>          resize factor before MOG2, 0 < s <= 1 (default 1.0)\n"
-        << "  --kneighbors <4|8>   pixel connectivity for blob labeling (default 4)\n";
+        << "  --kneighbors <4|8>   pixel connectivity for blob labeling (default 4)\n"
+        << "  --event_out <path>   path to save event output (optional)\n";
 }

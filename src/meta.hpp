@@ -11,6 +11,7 @@ struct ClipMeta {
     CountLine countLine;
     int width;
     int height;
+    std::string clipAlias;
 };
 
 // Throws std::runtime_error if

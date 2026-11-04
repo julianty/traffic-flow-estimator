@@ -39,9 +39,10 @@ const std::vector<Track>& Tracker::tracks() const {
     return tracks_;
 }
 
-void Tracker::update(const std::vector<Blob>& blobs, bool countingEnabled) {
-    // Create a container for the candidates
+std::vector<CrossingEvent> Tracker::update(const std::vector<Blob>& blobs, bool countingEnabled) {
+    // Create a container for the candidates and events
     std::vector<Candidate> candidates;
+    std::vector<CrossingEvent> crossingEvents;
 
     // Loop over each blob
     for (size_t i=0; i < blobs.size(); i++) {
@@ -105,6 +106,9 @@ void Tracker::update(const std::vector<Blob>& blobs, bool countingEnabled) {
                 // and if the number of hits passes the minimum
                 count_ += 1;
                 t.counted = true;                
+                crossingEvents.push_back({
+                    t.id, t.centroid
+                });
             }
         }
     }
@@ -123,5 +127,5 @@ void Tracker::update(const std::vector<Blob>& blobs, bool countingEnabled) {
     });
     tracks_.erase(removeIter, tracks_.end());
 
-
+    return crossingEvents;
 }

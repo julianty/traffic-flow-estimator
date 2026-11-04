@@ -14,10 +14,15 @@ struct Track {
     bool counted = false;
 };
 
+struct CrossingEvent {
+    int trackId;
+    cv::Point2f centroid;
+};
+
 class Tracker {
 public:
     Tracker(CountLine line);
-    void update(const std::vector<Blob>& blobs, bool countingEnabled);
+    std::vector<CrossingEvent> update(const std::vector<Blob>& blobs, bool countingEnabled);
     const std::vector<Track>& tracks() const;
     int count() const;
 private:

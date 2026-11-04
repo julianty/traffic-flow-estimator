@@ -58,10 +58,11 @@ ClipMeta loadClipMeta(const std::string& metaPath, const std::string& videoPath)
     // Read properties
     int width = clipNode["width"];
     int height = clipNode["height"];
-
+    std::string alias = clipNode.name();
     return ClipMeta{
         {readCountLine(clipNode)},
         width,
         height,
+        alias
     };
 }

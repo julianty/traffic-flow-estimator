@@ -14,7 +14,7 @@
 #include <vector>
 #include <queue>
 #include <optional>
-
+#include <fstream>
 
 namespace {
     // Pipeline Parameters
@@ -240,7 +240,21 @@ int main(int argc, char* argv[]) {
     // Instantiate tracker
     Tracker crossingTracker{CountLine{countLine1, countLine2}};
     
+    // Pause flag
     bool paused = false;
+
+    // Check for event_out flag
+    std::ofstream eventOutput;
+    if (flags.event_out != "") {
+        // Open a file
+        eventOutput.open(flags.event_out);
+        if (!eventOutput.is_open()) {
+            std::cerr << "Output file " + flags.event_out + " cannot be opened." << std::endl;
+            return 1;
+        }
+        // Write header
+        eventOutput << "clip,frame,track_id,x\n";
+    }
 
     // Main loop
     while (cap.read(img)) {
@@ -270,8 +284,16 @@ int main(int argc, char* argv[]) {
         std::vector<Blob> keptBlobs = nms(blobs, iouThreshold);
 
         // Call update to crossing
-        crossingTracker.update(keptBlobs, frame_count > warmupFrames);
+        std::vector<CrossingEvent> crossingEvents = 
+            crossingTracker.update(keptBlobs, frame_count > warmupFrames);
 
+        // Write to event output, silenty executes if event_out is not provided
+        for (auto& event: crossingEvents) {
+            eventOutput << metaData.clipAlias << ','
+                << frame_count << ','
+                << event.trackId << ','
+                << event.centroid.x / flags.scale << '\n';
+        }
         if (!flags.headless) {
             // Draw next frame
             render(imgScaled, filterMask, frame_count, keptBlobs, 
@@ -289,10 +311,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
+
     // Report timings
     std::chrono::duration<double> dur = std::chrono::steady_clock::now() - start;
     std::cout << "Run time: "  << dur.count() << std::endl;
     std::cout << "Effective frame rate: "  << frame_count / dur.count() << std::endl;
+    std::cout << "Crossings: " << crossingTracker.count() << std::endl;
 
     // Cleanup
     cv::destroyAllWindows();
