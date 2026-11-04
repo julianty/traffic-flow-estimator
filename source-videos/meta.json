@@ -503,10 +503,10 @@
         ],
         "mask_regions": [],
         "ground_truth": {
-          "file": null,
-          "count": null,
-          "counted_by": null,
-          "date": null
+          "file": "ground-truth/ucsd-i5-incoming-dslr2.csv",
+          "count": 66,
+          "counted_by": "Julian",
+          "date": "2026-11-04"
         }
       }
     }
