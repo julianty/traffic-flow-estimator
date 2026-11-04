@@ -117,30 +117,40 @@ namespace {
     constexpr int KEY_ESC = 27;
     constexpr int KEY_SPACE = ' ';
     bool isQuitKey(int keyCode) {return keyCode == KEY_ESC || keyCode == 'q' || keyCode == 'Q';}
-    KeyAction handleInput() {
-        int wait = cv::waitKey(1);
-        // Listen for stop key
-        if (isQuitKey(wait)) {
-            return KeyAction::Quit;
+    bool isStepKey(int keyCode) {return keyCode == '.' || keyCode == 'k';}
+    KeyAction handleInput(bool& paused) {
+        // Check if paused
+        if (!paused) {
+            int wait = cv::waitKey(1);
+            // Listen for stop key
+            if (isQuitKey(wait)) {
+                return KeyAction::Quit;
+            }
+            if (wait == KEY_SPACE) {
+                // Pause loop
+                paused = true;
+            }
         }
-        // Listen for pause key
-        if (wait == KEY_SPACE) {
-            // Enter wait loop
+        if (paused) {
             while (true) {
                 int pauseKey = cv::waitKey(0);
                 
                 // When a key is pressed:
                 if (pauseKey == KEY_SPACE) {
                     // Resume loop
-                    break;
+                    paused = false;
+                    return KeyAction::Continue;
                 } else if (isQuitKey(pauseKey)) {
                     return KeyAction::Quit;
+                } else if (isStepKey(pauseKey)) {
+                    return KeyAction::Continue;
                 } else {
                     // non-mapped key, continue in loop
-                    std::cout << "Press 'q', 'SPACEBAR', or 'ESC'" << std::endl;
+                    std::cout << "Press 'q', 'SPACEBAR', '.', 'k', or 'ESC'" << std::endl;
                 }
             }
-        }
+        } 
+        
         return KeyAction::Continue;
     }
     constexpr int openKernelSize = 3;
@@ -230,6 +240,8 @@ int main(int argc, char* argv[]) {
     // Instantiate tracker
     Tracker crossingTracker{CountLine{countLine1, countLine2}};
     
+    bool paused = false;
+
     // Main loop
     while (cap.read(img)) {
         // Reize and apply mog2
@@ -270,7 +282,7 @@ int main(int argc, char* argv[]) {
                 keptBlobs.size());
 
             // Handle any inputs
-            KeyAction action = handleInput();
+            KeyAction action = handleInput(paused);
             if (action == KeyAction::Quit) {
                 break;
             }
