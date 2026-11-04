@@ -116,3 +116,28 @@
 **Behind schedule?** No. The small late items are the headless count printout, the `auckland-fwy` count line and the Week 5 report. Catch-up: before starting the ground truth, spend about 30 minutes adding `std::cout << "Crossings: " << crossingTracker.count()` after the loop. Then run headless `auckland-hwy` @0.5 to get the first number and put it in `week-05.md` before sending. Week 6 compares against that number, so it has to exist first.
 
 **Next week:** Week 6 (Oct 27–Nov 2): manual ground-truth count on `auckland-hwy` (post-warm-up frames only, frame > 120, same y = 200 line), then measure accuracy and sort the errors into misses, double-counts (split vehicles) and merges (occlusion). Use `build/demo.mp4` to tag each error. Commit `make_demo` first, and consider normalizing the Makefile's line endings back to LF in the same commit.
+
+## 2026-11-02 — Week 6 (Oct 27–Nov 2): Manual ground-truth count on the main clip; measure accuracy; iterate on misses/double-counts/occlusion
+**Status:** Behind — Week 6 ends today and its core milestone (manual ground truth → accuracy number) hasn't started. The week went into new footage and switching the main clip twice, and no pipeline code changed.
+
+**Changes this week:** (6 commits, Oct 26–Nov 1, all on `main`. `bc2dbf0` is **not pushed**: `origin/main` is at `4be56ba`. Working tree clean, nothing uncommitted.)
+- `16th-st` / `16th-st-2` own iPhone clips added to `meta.json`, plus `scratch/stabilize.py` (ORB + RANSAC frame locking) (`003d487`)
+- `make_demo` committed: records the pipeline overlay to .mp4 and prints the crossing count (`2b72449`, last week's staged work). Week 6 checkpoint GIFs made for `ucsd-i5-incoming`/`-outgoing`
+- Main/validation switched from the Auckland Pexels clips to Julian's own 60 fps UCSD I-5 footage: `ucsd-i5-incoming` (y = 550, ~76 crossings) and `ucsd-i5-outgoing` (y = 750, ~100). Count lines were picked by running the tracker against candidate lines (`f2df932`)
+- Week 5 progress-log entry (`f84f57f`). Docs swept for stale facts after the switch: CLAUDE.md, README, log.md backfilled for Oct 21/26/31, and both Scope checklist items are now ticked (`4be56ba`)
+- Main switched again to the steadier DSLR take `ucsd-i5-incoming-dslr` (drift ≤ 2 px, y = 400, ~73 crossings, warm-up ~16 frames). `-dslr2`, `ucsd-i5-incoming` and `ucsd-i5-outgoing` are now validation (`bc2dbf0`, unpushed)
+- No changes to `src/` this week
+
+**Roadmap progress:**
+- Week 6 manual ground-truth count on main: not started. Every `ground_truth` entry in `meta.json` is still null, and log.md lists it as "Open" for `ucsd-i5-incoming-dslr`
+- Week 6 measure accuracy: not started (needs the ground truth). The ~73 / ~66 / ~76 / ~100 figures are tracker output, unverified
+- Week 6 iterate on misses/double-counts/occlusion: not started. No tracker or mask changes. The 60 fps concern (`maxMissed` 5 = 83 ms) was noted but not tested
+- Week 6 `reports/week-06.md`: not started (the file doesn't exist; `reports/` stops at week-05)
+- Week 5 carry-over, print the count in headless mode: still not done. `main.cpp` only prints timings (~L282). `make_demo` prints a count, so numbers are available that way
+- Week 5 carry-over, watch the overlay for stable IDs / one count per vehicle: partial. GIFs were made and some artifacts noted (top-right box, edge streak), but no per-vehicle check is recorded
+- Week 5 carry-over, `auckland-fwy` count line: moot after the clip switch
+- Re-tune MOG2/kernels/area filter on 60 fps footage (raised in log.md Oct 31): not started. `mog2_tune` and `warmup_check` still use area 100 vs. `main`'s 200
+
+**Behind schedule?** Yes, by about one week. Late: the Week 6 ground truth, the accuracy breakdown, the report, and the Week 5 headless count. Week 7 (Nov 3–9) is already the buffer week, so it absorbs this, but the stretch go/no-go decision depends on the error breakdown. Catch-up: freeze the main clip at `ucsd-i5-incoming-dslr` (no more switching). Add the one-line `Crossings:` print to headless `main`, then count by hand on frames > 120 at y = 400. At 49.5 s and ~73 vehicles that's one sitting, using `make_demo` frame ranges at 0.5× playback. Tag each disagreement as miss, double-count or merge, record the result in `meta.json` and `reports/week-06.md`, then push `bc2dbf0`.
+
+**Next week:** Week 7 (Nov 3–9): buffer and iteration on accuracy. Decision point: go/no-go on the stretch structures (ring buffer, KD-tree) based on time left. If merged vehicles dominate the error breakdown, try blob splitting (distance-transform watershed or track-seeded multi-source BFS) and re-measure against the same ground truth.
