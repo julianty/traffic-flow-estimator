@@ -8,6 +8,7 @@
 #include "nms.hpp"
 #include "meta.hpp"
 #include "tracker.hpp"
+#include "group.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cmath>
@@ -26,6 +27,9 @@ namespace {
     //    blob filtering
     const int blobAreaThreshold = 200;
     constexpr double iouThreshold = 0.5;
+    //    union find grouping parameters
+    constexpr double minXOverlap = 0.5;
+    constexpr double maxGapY = 10; // processing-scale pixels (scale applied)
     //    metadata path
     const std::string metadataPath = "source-videos/meta.json";
 
@@ -281,7 +285,10 @@ int main(int argc, char* argv[]) {
         );
 
         // Run Non-max suppression
-        std::vector<Blob> keptBlobs = nms(blobs, iouThreshold);
+        std::vector<Blob> nmsBlobs = nms(blobs, iouThreshold);
+
+        // Run union-find
+        std::vector<Blob> keptBlobs = groupFragments(nmsBlobs, minXOverlap, maxGapY);
 
         // Call update to crossing
         std::vector<CrossingEvent> crossingEvents = 
