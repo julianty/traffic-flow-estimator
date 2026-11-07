@@ -24,6 +24,14 @@ build/nms_check.exe: scratch/nms_check.cpp src/nms.cpp src/nms.hpp src/heap.cpp 
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/nms.cpp src/heap.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
 
+build/unionfind_check.exe: scratch/unionfind_check.cpp src/unionfind.cpp src/unionfind.hpp
+	@mkdir -p build
+	g++ -std=c++17 -g $< src/unionfind.cpp -o $@
+
+build/group_check.exe: scratch/group_check.cpp src/group.cpp src/group.hpp src/unionfind.cpp src/unionfind.hpp src/ccl.hpp
+	@mkdir -p build
+	g++ -std=c++17 -g $< src/group.cpp src/unionfind.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
+
 build/mog2_tune.exe: scratch/mog2_tune.cpp src/ccl.cpp src/ccl.hpp
 	@mkdir -p build
 	g++ -std=c++17 -g $< src/ccl.cpp -o $@ $(shell pkg-config --cflags --libs opencv5)
@@ -35,6 +43,10 @@ build/warmup_check.exe: scratch/warmup_check.cpp src/ccl.cpp src/ccl.hpp
 DEMO_SRCS := src/ccl.cpp src/nms.cpp src/heap.cpp src/meta.cpp src/tracker.cpp
 
 build/make_demo.exe: scratch/make_demo.cpp $(DEMO_SRCS) $(MAIN_HDRS)
+	@mkdir -p build
+	g++ -std=c++17 -g $< $(DEMO_SRCS) -o $@ $(shell pkg-config --cflags --libs opencv5)
+
+build/blob_dump.exe: scratch/blob_dump.cpp $(DEMO_SRCS) $(MAIN_HDRS)
 	@mkdir -p build
 	g++ -std=c++17 -g $< $(DEMO_SRCS) -o $@ $(shell pkg-config --cflags --libs opencv5)
 
