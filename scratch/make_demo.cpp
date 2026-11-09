@@ -1,5 +1,6 @@
 // Records the pipeline overlay (frame | mask, boxes, tracks, crossing count) to an .mp4 for demos.
-// Usage: make_demo <video> [out=build/demo.mp4] [scale=0.5] [start=121] [end=400]
+// Usage: make_demo <video> [out=build/demo.mp4] [scale=0.5] [start=121] [end=400] [group=1]
+// group=0 skips the union-find fragment grouping stage (shows the pipeline before it was added).
 // The whole clip up to `end` is processed so MOG2 and the tracker have their history;
 // only frames start..end are written. Pipeline constants are a manual copy of main.cpp's.
 #include <opencv2/opencv.hpp>
@@ -9,6 +10,7 @@
 #include <string>
 #include <vector>
 #include "../src/ccl.hpp"
+#include "../src/group.hpp"
 #include "../src/meta.hpp"
 #include "../src/nms.hpp"
 #include "../src/tracker.hpp"
@@ -20,6 +22,8 @@ namespace {
     constexpr double mog2LearningRate = 0.003;
     constexpr int blobAreaThreshold = 200;
     constexpr double iouThreshold = 0.5;
+    constexpr double minXOverlap = 0.5;
+    constexpr int maxGapY = 10; // processing-scale pixels, sized at scale 0.5
     constexpr int openKernelSize = 3;
     constexpr int closeKernelSize = 7;
     const std::string metadataPath = "source-videos/meta.json";
@@ -64,7 +68,7 @@ namespace {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <video> [out=build/demo.mp4] [scale=0.5] [start=121] [end=400]\n";
+        std::cerr << "Usage: " << argv[0] << " <video> [out=build/demo.mp4] [scale=0.5] [start=121] [end=400] [group=1]\n";
         return 1;
     }
     std::string videoPath = argv[1];
@@ -72,6 +76,7 @@ int main(int argc, char* argv[]) {
     double scale = argc > 3 ? std::stod(argv[3]) : 0.5;
     int startFrame = argc > 4 ? std::stoi(argv[4]) : warmupFrames + 1;
     int endFrame = argc > 5 ? std::stoi(argv[5]) : 400;
+    bool useGrouping = argc > 6 ? std::stoi(argv[6]) != 0 : true;
 
     cv::VideoCapture cap(videoPath);
     if (!cap.isOpened()) { std::cerr << "Can't open " << videoPath << "\n"; return 1; }
@@ -110,6 +115,7 @@ int main(int argc, char* argv[]) {
                                    [](const Blob& b) { return b.area < blobAreaThreshold; }),
                     blobs.end());
         std::vector<Blob> kept = nms(blobs, iouThreshold);
+        if (useGrouping) kept = groupFragments(kept, minXOverlap, maxGapY);
         tracker.update(kept, frameCount > warmupFrames);
 
         if (frameCount < startFrame) continue;
