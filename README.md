@@ -4,6 +4,10 @@ Estimating traffic flow from single fixed-camera video using classical (non-deep
 
 Built as an Honors Contract project for CISC187 (Data Structures, C++).
 
+![Pipeline running on I-5 footage: video frame with vehicle boxes, track IDs and the count line on the left, cleaned foreground mask on the right](docs/media/pipeline-demo.gif)
+
+*The pipeline on my own footage of I-5 near UCSD (6 s, frames 1150–1510). Left: video frame with each vehicle's box, track ID and centroid, and the count line in red. Right: the cleaned foreground mask the blobs come from, with the running crossing count.*
+
 ## Why classical CV, not a detector?
 
 The point of the project is the data structures, not the detections. Rather than dropping in an off-the-shelf object detector, vehicles are found and tracked with hand-implemented algorithms built on top of OpenCV's lower-level primitives (background subtraction, video I/O, basic image ops).
@@ -121,7 +125,13 @@ Pexels clips are used under the [Pexels License](https://www.pexels.com/license/
 
 Pipeline crossings land a median of 2 frames before the human mark.
 
-**What the errors were.** I stepped through every disagreement in the first grade. Two turned out to be ground-truth mistakes (a car missed at the very end of one clip, and a row with no car on the other), which I corrected. Every real error was the same kind: **one vehicle split into two blobs** in the foreground mask (a car, a maintenance truck, an SUV whose roof rack separated), which the tracker then counted twice. There were no merged vehicles and no lost-and-respawned tracks on this footage. So I skipped the blob-splitting approaches I had planned (watershed, track-seeded BFS) and added the union-find grouping stage instead.
+**What the errors were.** I stepped through every disagreement in the first grade. Two turned out to be ground-truth mistakes (a car missed at the very end of one clip, and a row with no car on the other), which I corrected. Every real error was the same kind: **one vehicle split into two blobs** in the foreground mask (a car, a maintenance truck, an SUV whose roof rack separated), which the tracker then counted twice.
+
+![Same frame before and after fragment grouping: on the left the silver car on the right is two boxes with two track IDs; on the right it is one box with one ID](docs/media/grouping-before-after.png)
+
+*Frame 1203 of `ucsd-i5-incoming-dslr`, without (left) and with (right) union-find grouping. Without it, the silver car's roof and front end separate in the mask, the car becomes two blobs with two tracks, and both get counted as they cross the red line. With grouping, the two fragments are merged into one box and one track.*
+
+There were no merged vehicles and no lost-and-respawned tracks on this footage. So I skipped the blob-splitting approaches I had planned (watershed, track-seeded BFS) and added the union-find grouping stage instead.
 
 **Caveats.** Both graded clips were shot on the same day from the same overpass, and the grouping thresholds were sized using the fragment boxes from both clips' errors, so `-dslr2` is not a fully held-out test for that stage. The two remaining validation clips (`ucsd-i5-incoming`, `ucsd-i5-outgoing`) were not used for any tuning and are the next thing to count. The grouping gap is in processing-scale pixels, so it is only calibrated for `--scale 0.5`.
 
@@ -132,5 +142,6 @@ Pipeline crossings land a median of 2 frames before the human mark.
 | `src/` | The pipeline: `main.cpp` (frame loop, display, controls), `args.*` (CLI), `ccl.*` (BFS labeling), `heap.*` + `nms.*` (heap NMS), `unionfind.*` + `group.*` (fragment grouping), `tracker.*`, `meta.*` (clip metadata) |
 | `scratch/` | Check programs (`ccl_check`, `heap_check`, `nms_check`, `unionfind_check`, `group_check`), tuning and diagnostic tools (`mog2_tune`, `warmup_check`, `blob_dump`, `frame_grid`, `make_demo`), `grade.py`, `stabilize.py` |
 | `ground-truth/` | Hand-counted crossings per clip |
+| `docs/media/` | README images, rendered with `scratch/make_demo` |
 | `source-videos/meta.json` | Per-clip metadata: source, resolution, stability, role, count line, ground-truth file |
 | `reports/`, `PROGRESS_LOG.md`, `log.md` | Weekly progress reports and working notes |
