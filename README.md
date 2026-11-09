@@ -8,22 +8,32 @@ Built as an Honors Contract project for CISC187 (Data Structures, C++).
 
 The point of the project is the data structures, not the detections. Rather than dropping in an off-the-shelf object detector, vehicles are found and tracked with hand-implemented algorithms built on top of OpenCV's lower-level primitives (background subtraction, video I/O, basic image ops).
 
-## Approach
+## Pipeline
 
-1. **Background subtraction** (OpenCV `BackgroundSubtractorMOG2`/`KNN`) to get a foreground mask per frame.
-2. **BFS-based connected-components labeling** (implemented from scratch) to extract vehicle blobs from the mask, cross-checked against `cv::findContours`.
-3. **Heap-based non-max suppression** (implemented from scratch) to dedupe overlapping blob detections.
-4. Centroid tracking and line-crossing counting to produce vehicle counts through a defined region of the frame.
+Each frame goes through these stages (`src/main.cpp`). The parts marked **from scratch** are my own implementations, each with a standalone check program in `scratch/`:
 
-### Stretch goals
-- Union-find for merging track associations across frames
-- KD-tree for nearest-neighbor frame-to-frame vehicle matching
-- Per-vehicle speed estimation (pixel↔world calibration)
-- Per-lane counts
+1. **Background subtraction:** OpenCV `BackgroundSubtractorMOG2` with a fixed, slow learning rate, which cut vehicle fragmentation compared with the automatic rate. Shadow pixels are thresholded out, then a morphological open (3×3) and close (7×7) clean up the mask.
+2. **Connected-components labeling (from scratch, BFS):** `src/ccl.*` labels the binary mask with 4- or 8-connectivity and returns each blob's bounding box, area and centroid. Checked against `cv::connectedComponentsWithStats` frame by frame: 0 mismatches at both connectivities.
+3. **Area filter:** drops blobs below a minimum size (noise, specks).
+4. **Non-max suppression (from scratch, binary heap):** `src/heap.*` is a max-heap of blobs ranked by area, built in O(n) with bottom-up sift-down; `src/nms.*` pops it largest first and drops any blob whose IoU with a kept blob is over 0.5. Tested against a sorted reference and `std::priority_queue` (233,800 pops) and against randomized property checks.
+5. **Fragment grouping (from scratch, union-find):** `src/unionfind.*` (path compression + union by rank) and `src/group.*` merge blobs that are fragments of one vehicle: two blobs are united when their horizontal extents overlap by at least 50% of the narrower box and the vertical gap between them is at most 10 px, so fragments in the same lane join and cars in adjacent lanes stay apart. Each group becomes one box with an area-weighted centroid. Tested against a brute-force reference (804,000 unions) and on the real boxes from the observed double counts.
+6. **Tracking and counting:** `src/tracker.*` matches blobs to tracks greedily, nearest first, within a distance gate. A track is confirmed after 3 hits and dropped after 5 misses, and it is counted once when its centroid changes sides of the clip's count line (defined per clip in `source-videos/meta.json`). Frames during MOG2's warm-up are not counted.
+
+The output is a total count, an optional CSV of crossing events (`clip,frame,track_id,x`), and in interactive mode a side-by-side view of the frame and mask with boxes, track IDs, the count line and running counters.
+
+Headless at half resolution (960×540), the whole pipeline runs at about 6–8 ms per frame on a laptop, well within real time for 60 fps video.
 
 ## Status
 
-Early setup — see `CLAUDE.md` for the full project scope, roadmap, and weekly plan.
+*Last updated Nov 9, 2026. Target finish: Dec 2, 2026.*
+
+- **Done:** the full pipeline above, end to end, on Windows and macOS. Hand-counted ground truth for two clips, a grading script, and an error analysis that led to the fragment-grouping stage.
+- **Next:** ground truth for the two remaining validation clips (a wider phone framing of the same road, and the opposite direction with 5 lanes), which have not been used for any tuning; then the stretch goals below and a formal write-up.
+
+### Stretch goals
+- Ring buffer of recent centroids per track: velocity estimates (pixels/frame) and position prediction for missed frames
+- Speed in world units (needs pixel↔world calibration) and per-lane counts
+- KD-tree for nearest-neighbor matching (likely unnecessary at under 10 blobs per frame; may be kept as a scaling comparison instead)
 
 ## Tech stack
 
@@ -78,7 +88,9 @@ build/main.exe --video_path source-videos/ucsd-i5-incoming-stabilized-boosted-ds
 - `--scale <s>` (`0 < s <= 1`) downscales frames before processing. At 1.0, the side-by-side display is 3840 px wide, so use 0.5 when watching interactively.
 - `--headless` skips all display, for timing runs.
 - `--kneighbors <4|8>` picks the blob-labeling connectivity (default 4).
-- While the window is open: space pauses and resumes; `q`/Esc quits.
+- `--event_out <path>` writes one CSV row per counted crossing (`clip,frame,track_id,x`), the input to `scratch/grade.py`.
+- Every run prints `Crossings: N` at the end.
+- While the window is open: space pauses and resumes; `.` or `k` steps one frame while paused; `q`/Esc quits.
 - The `.exe` suffix is kept on macOS too, so targets and commands match on both platforms.
 
 ### VS Code build shortcut (optional)
@@ -96,4 +108,29 @@ Pexels clips are used under the [Pexels License](https://www.pexels.com/license/
 
 ## Benchmark
 
-Pipeline vehicle counts will be validated against a manually-counted ground truth on the same footage.
+**Ground truth.** For each graded clip, I stepped through the video frame by frame and recorded every vehicle whose middle crosses the count line (frame, lane, size class) in `ground-truth/<clip>.csv`. The same counting rules apply to every clip.
+
+**Grading.** `scratch/grade.py` matches pipeline crossing events to ground-truth rows one-to-one within ±15 frames (0.25 s at 60 fps). It reports true positives, misses and false counts, and plots the timeline and timing offsets.
+
+**Results** (`--scale 0.5`, current `main`):
+
+| Clip | Role | Ground truth | Before grouping | After grouping |
+|---|---|---|---|---|
+| `ucsd-i5-incoming-dslr` | main (tuning) | 71 | 73 counted, 2 false | **71 counted, 0 false, 0 missed** |
+| `ucsd-i5-incoming-dslr2` | validation | 65 | 66 counted, 1 false | **65 counted, 0 false, 0 missed** |
+
+Pipeline crossings land a median of 2 frames before the human mark.
+
+**What the errors were.** I stepped through every disagreement in the first grade. Two turned out to be ground-truth mistakes (a car missed at the very end of one clip, and a row with no car on the other), which I corrected. Every real error was the same kind: **one vehicle split into two blobs** in the foreground mask (a car, a maintenance truck, an SUV whose roof rack separated), which the tracker then counted twice. There were no merged vehicles and no lost-and-respawned tracks on this footage. So I skipped the blob-splitting approaches I had planned (watershed, track-seeded BFS) and added the union-find grouping stage instead.
+
+**Caveats.** Both graded clips were shot on the same day from the same overpass, and the grouping thresholds were sized using the fragment boxes from both clips' errors, so `-dslr2` is not a fully held-out test for that stage. The two remaining validation clips (`ucsd-i5-incoming`, `ucsd-i5-outgoing`) were not used for any tuning and are the next thing to count. The grouping gap is in processing-scale pixels, so it is only calibrated for `--scale 0.5`.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/` | The pipeline: `main.cpp` (frame loop, display, controls), `args.*` (CLI), `ccl.*` (BFS labeling), `heap.*` + `nms.*` (heap NMS), `unionfind.*` + `group.*` (fragment grouping), `tracker.*`, `meta.*` (clip metadata) |
+| `scratch/` | Check programs (`ccl_check`, `heap_check`, `nms_check`, `unionfind_check`, `group_check`), tuning and diagnostic tools (`mog2_tune`, `warmup_check`, `blob_dump`, `frame_grid`, `make_demo`), `grade.py`, `stabilize.py` |
+| `ground-truth/` | Hand-counted crossings per clip |
+| `source-videos/meta.json` | Per-clip metadata: source, resolution, stability, role, count line, ground-truth file |
+| `reports/`, `PROGRESS_LOG.md`, `log.md` | Weekly progress reports and working notes |
