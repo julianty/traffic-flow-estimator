@@ -2,6 +2,7 @@
 #include "ccl.hpp"
 #include <opencv2/opencv.hpp>
 #include "heap.hpp"
+#include <algorithm>
 
 namespace {
     // Takes two cv::Rect, and outputs the IoU score
@@ -39,6 +40,29 @@ namespace {
         score = static_cast<double>(intersectionArea) / unionArea;
         return score;
     }
+    // Takes two blobs, and returns true if the first is prioritized, and false otherwise
+    bool prefer(const Blob& b1, const Blob& b2) {
+        // prioritize size
+        if (b1.area > b2.area) {
+            return true;
+        } else if (b2.area > b1.area) {
+            return false;
+        }
+        // prioritize smaller y
+        if (b1.bounding_box.y < b2.bounding_box.y) {
+            return true;
+        } else if (b1.bounding_box.y > b2.bounding_box.y) {
+            return false;
+        }
+        // prioritize smaller x
+        if (b1.bounding_box.x < b2.bounding_box.x) {
+            return true;
+        } else if (b1.bounding_box.x > b2.bounding_box.x) {
+            return false;
+        }
+        // b2 wins by default
+        return false;
+    }
 }
 
 
@@ -63,6 +87,36 @@ std::vector<Blob> nms(const std::vector<Blob>& blobs, double iouThreshold) {
             }
         }
         if (!disqualify) keep.push_back(candidate);
+    }
+    return keep;
+}
+
+
+std::vector<Blob> brute_force_nms(const std::vector<Blob>& blobs, double iouThreshold) {
+    // Create a copy
+    std::vector<Blob> blobs_copy = blobs;
+    // Sort by rank order
+    std::sort(blobs_copy.begin(), blobs_copy.end(), [](const Blob& b1, const Blob& b2) {return prefer(b1, b2);});
+
+    // Initialize keep
+    std::vector<Blob> keep{};
+
+    // Compare each blob in rank order against the keep vector
+    for (size_t i=0; i<blobs_copy.size(); i++) {
+        const Blob& current = blobs_copy[i];
+
+        // Check against kept blobs
+        bool disqualify = false;
+        for (size_t j=0; j<keep.size(); j++) {
+            const Blob& other = keep[j];
+            double score = iouScore(current.bounding_box, other.bounding_box);
+            if (score > iouThreshold) {
+                disqualify = true;
+                break;
+            }
+        }
+        // Save it if it wasn't disqualified
+        if (!disqualify) keep.push_back(current);
     }
     return keep;
 }

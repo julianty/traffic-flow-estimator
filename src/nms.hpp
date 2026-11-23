@@ -4,3 +4,4 @@
 // Takes vector of blobs from the labels function, a IoU threshold, 
 // and outputs a vector of blobs that pass the threshold
 std::vector<Blob> nms(const std::vector<Blob>& blobs, double iouThreshold);
+std::vector<Blob> brute_force_nms(const std::vector<Blob>& blobs, double iouThreshold);
