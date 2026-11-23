@@ -165,3 +165,50 @@
 **Behind schedule?** Not on the code. Late items: the stretch go/no-go decision, the Week 6 and Week 7 reports (2 Sundays overdue), the post-grouping grade in CLAUDE.md, and the 6 unpushed commits. Catch-up, in one sitting before Week 8 starts: push; record the 0-error re-grade and the grouping rule in CLAUDE.md (Code layout + Scope, moving union-find to implemented); then write one combined `reports/week-06-07.md` around the before/after table (73→71 and 66→65 crossings, 2+1 FP → 0). Make the go/no-go call in that same report. Suggested call: drop the KD-tree, since there are under 10 blobs per frame and brute force is fine. Keep the ring buffer only if Week 9 velocity is still a goal.
 
 **Next week:** Week 8 (Nov 10–16): stretch, a ring buffer of recent centroids (velocity, position prediction) and/or KD-tree tracking, else polish + more test clips. Given the go/no-go above, the higher-value "more test clips" work is to count ground truth on `ucsd-i5-incoming` and `ucsd-i5-outgoing` and grade grouping without re-tuning (and at `--scale 1.0` once `maxGapY` scales).
+
+## 2026-11-16 — Week 8 (Nov 10–16): Stretch — ring buffer and/or KD-tree tracking, else polish + more test clips
+**Status:** Behind. There were no commits and no file changes from Nov 10 to Nov 16. Week 8's focus (stretch structure, or more test clips) is not started, and the Week 7 go/no-go is still undecided.
+
+**Changes this week:** (4 commits in the 7-day window, all on Sun Nov 9, the last day of Week 7, so they are Week 7 work. **None during Nov 10–16.** Everything is now pushed: `origin/main` = `aa1e469`, which clears last week's 6 unpushed commits. Working tree clean, nothing uncommitted.)
+- README rewritten around the current pipeline (6 stages, including union-find grouping), the before/after results table (`-dslr` 73→71, `-dslr2` 66→65, 0 FP / 0 FN after grouping), the error analysis, caveats and a repo layout table (`de6d7ff`)
+- Week 7 progress-log entry (`2058786`)
+- `make_demo` gained the grouping stage and a `group=0|1` option for before/after renders (`4b2836c`)
+- README media: `docs/media/pipeline-demo.gif` and `grouping-before-after.png` (`aa1e469`)
+
+**Roadmap progress:**
+- Week 8 ring buffer (velocity / position prediction): not started. No `src/` changes since `272c323` (Nov 6), and Scope still has it unchecked
+- Week 8 KD-tree: not started. README now calls it "likely unnecessary at under 10 blobs per frame", so it is effectively dropped, but this is not recorded as a decision
+- Week 8 fallback, polish: partial. The README/demo polish on Nov 9 counts toward this
+- Week 8 fallback, more test clips: not started. `ground-truth/` still holds only the two DSLR clips. `ucsd-i5-incoming` and `ucsd-i5-outgoing` have no counts, so grouping has never been graded on held-out footage
+- Week 7 go/no-go on stretch structures: still not done. It has been carried for 2 weeks now
+- Week 6/7 reports: not done. `reports/` still stops at `week-05.md`. Weeks 6, 7 and 8 are all missing (3 Sundays overdue)
+- CLAUDE.md upkeep: partial. The Nov 9 commit updated only the `make_demo` line. Code layout has no entry for `src/unionfind.*` / `src/group.*` (0 mentions), Scope still lists union-find as "Considered, not planned", and the Week 7 row still calls grouping a "candidate fix" with no post-grouping grade. The README is now more current than the source of truth
+- Carried housekeeping: `maxGapY` in `main.cpp` (L32) is still a fixed 10 with the comment "scale applied", so grouping is only calibrated for `--scale 0.5`
+
+**Behind schedule?** Yes, by about one week. Late: the Week 8 focus (no stretch structure and no new test clips), the Week 7 go/no-go, and the Week 6–8 reports. There are 16 days left to Dec 2, and Week 10 is the light Thanksgiving week, so Week 9 (Nov 17–23) is the last full working week. Catch-up suggestion: make the go/no-go call now and fold Weeks 8 and 9 into one plan. Drop the KD-tree. Do the ring buffer only as the per-vehicle velocity deliverable (fixed-size array per track, px/frame from the oldest vs. newest centroid). Spend the first sitting of Week 9 counting ground truth on `ucsd-i5-incoming` (~76 crossings, one sitting like `-dslr`) and grading it without re-tuning. That held-out number is what the write-up needs most. Write one combined `reports/week-06-08.md` with the decision and the results table, and update CLAUDE.md Scope/Code layout in the same sitting.
+
+**Next week:** Week 9 (Nov 17–23): stretch, per-vehicle velocity (px/frame) and speed estimation / per-lane counts (if time allows). Given the slip, the realistic scope is the ring-buffer velocity in px/frame plus held-out ground truth on `ucsd-i5-incoming`. Defer world-unit speed and per-lane counts.
+
+## 2026-11-23 — Week 9 (Nov 17–23): Stretch — per-vehicle velocity (px/frame) and speed estimation / per-lane counts
+**Status:** Behind. No commits for the second week running (last commit `aa1e469`, Nov 9). The only new work is an unfinished, uncommitted brute-force labeler, which is optional write-up material, not this week's focus.
+
+**Changes this week:** (0 commits in the 7-day window, on any branch. `main` = `origin/main` = `aa1e469`.)
+- **Uncommitted** (Nov 21): `brute_force_label()` added to `src/ccl.cpp` / `src/ccl.hpp` (+71 lines ignoring whitespace). It is iterative label propagation: every foreground pixel starts with a unique label (`i * cols + j + 1`), then full sweeps copy the smallest neighbor label until a sweep changes nothing. This is the "label propagation vs. BFS" comparison from Open questions. **Not finished:** the blob save pass loop body is empty, so `blobs` is always returned empty and labels are not renumbered 1..N. It is not called anywhere (no check program or `main` flag uses it)
+- **Uncommitted:** both `ccl.*` files have also had their line endings converted (CRLF→LF), so `git diff --stat` shows 248+33 changed lines for a 71-line change
+- **Uncommitted:** last week's Week 8 entry in this file was never committed
+
+**Roadmap progress:**
+- Week 9 per-vehicle velocity (px/frame): not started. No ring buffer, `Track` is unchanged since Nov 6 (`src/tracker.*` untouched), Scope still unchecked
+- Week 9 speed in world units: not started (no calibration). Deferred last week, which is still the right call
+- Week 9 per-lane counts: not started. No lane geometry in `meta.json` or code
+- Week 8 ring buffer / KD-tree: not started. KD-tree remains effectively dropped but unrecorded
+- Week 8 more test clips (held-out ground truth): not started. `ground-truth/` still has only the two DSLR clips; grouping has still never been graded on `ucsd-i5-incoming` or `ucsd-i5-outgoing`
+- Week 7 go/no-go on stretch structures: not done (3 weeks carried)
+- Reports: not done. `reports/` still stops at `week-05.md` (Weeks 6–9 missing, 4 Sundays)
+- CLAUDE.md upkeep: not done. Still no Code layout entry for `src/unionfind.*` / `src/group.*`, union-find still "Considered, not planned", Week 7 row still calls grouping a "candidate fix"
+- Brute-force comparisons (Open questions, optional): partial. Label propagation is drafted but incomplete; no timing or peak-memory comparison yet
+- Carried housekeeping: `maxGapY` in `main.cpp` still unscaled (correct only at `--scale 0.5`); empty stray `-p/` dir at the repo root
+
+**Behind schedule?** Yes, by about two weeks on the stretch track; the minimum deliverable (counts + benchmark on the main clip) is done. Late: Week 8 and Week 9 focus, the go/no-go, held-out ground truth, Weeks 6–9 reports, CLAUDE.md upkeep. With Week 10 (Thanksgiving, light) plus Dec 1–2 left, there is no room for new stretch structures. Catch-up suggestion: declare the stretch structures cut (no ring buffer, no KD-tree) and spend the remaining time on what the write-up needs, in this order: (1) count ground truth on `ucsd-i5-incoming` and grade it without re-tuning — the only held-out accuracy number; (2) finish `brute_force_label` (fill the blob pass, add it to `ccl_check` to confirm it matches `label`, time both) only if you want the BFS comparison in the write-up; (3) one combined report plus CLAUDE.md Scope/Code layout update recording the decision.
+
+**Next week:** Week 10 (Nov 24–30): Thanksgiving week, light load — formal write-up, code cleanup, finalize benchmark numbers.
